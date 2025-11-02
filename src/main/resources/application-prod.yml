@@ -1,0 +1,28 @@
+spring:
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: health,info,logfile
+    endpoint:
+      logfile:
+        enabled: true
+      health:
+        probes:
+          enabled: true
+        show-details: never
+  logging:
+    file:
+      name: /app/logs/vehicle-collector-service.log
+    level:
+      root: INFO
+      org.springframework.web.reactive.function.client: WARN
+  config:
+    import: optional:file:/config/vehicle-collector-service-application.yml
+  #    in docker, mounted from server file path in opt/
+
+logging:
+  level:
+    root: INFO
+    com.emat.vehicle_collector_service.client: DEBUG
+    org.springframework.web.reactive.function.client: TRACE

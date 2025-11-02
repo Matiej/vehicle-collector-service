@@ -1,0 +1,12 @@
+spring:
+  config:
+    import: file:///G:/javaProjects/CONFIG/vehicle-collector-service/vehicle-collector-service-application.yml
+  data:
+    mongodb:
+      host: localhost
+      port: 27019
+      database: vehicle-collector-service_mongo_db
+      username: ${MONGO_USER}
+      password: ${MONGO_PWD}
+      authentication-database: admin
+      auto-index-creation: true

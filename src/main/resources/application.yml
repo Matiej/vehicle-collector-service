@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: @project.name@
+  output:
+    ansi.enabled: always
+  data:
+    mongodb:
+      auto-index-creation: true
+  logging:
+    level:
+      root: INFO
+      org.springframework.web.reactive.function.client: WARN
+
+springdoc:
+  swagger-ui.path: /docs
+
+app:
+  version: @project.version@
+  name: @project.name@
