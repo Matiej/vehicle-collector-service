@@ -9,9 +9,15 @@ class AppData {
         set(value) {
             field = value
         }
-
     @Value("\${app.version}")
     private lateinit var appVersion: String
+
+    @Value("\${app.tmp-assets-dir}")
+    private lateinit var tmpDir: String
+
+    @Value("\${app.assets-dir}")
+    private lateinit var assetsDir: String
+
 
     private fun now(): LocalDateTime {
         return LocalDateTime.now(clock)
@@ -19,5 +25,13 @@ class AppData {
 
     fun getApplicationVersion(): String {
         return appVersion.plus(" on the day: ").plus(now().withSecond(0).withNano(0).toString())
+    }
+
+    fun getTmpDir(): String {
+        return tmpDir
+    }
+
+    fun getAssetsDir(): String {
+        return assetsDir
     }
 }

@@ -15,8 +15,9 @@ import java.time.Instant
 object AssetMapper {
 
     fun toDomain(assetDocument: AssetDocument): Asset {
-        return Asset(
-            id = assetDocument.id,
+        return Asset( //todo moze w bazie dla nullable nie trzeba bedzie = null
+            id = assetDocument.id ?: "",
+            assetPublicId = assetDocument.assetPublicId,
             ownerId = assetDocument.ownerId,
             sessionId = assetDocument.sessionId,
             spotId = assetDocument.spotId,
@@ -34,7 +35,7 @@ object AssetMapper {
                     camera = it.camera
                 )
             },
-            deviceLocation = assetDocument.deviceLocation?.let {
+            deviceGeoLocation = assetDocument.deviceGeoLocation?.let {
                 GeoPoint(it.lat, it.lng)
             },
             thumbnails = assetDocument.thumbnails.map {
@@ -51,6 +52,7 @@ object AssetMapper {
     fun toDocument(asset: Asset): AssetDocument =
         AssetDocument(
             id = asset.id,
+            assetPublicId = asset.assetPublicId,
             ownerId = asset.ownerId,
             sessionId = asset.sessionId,
             spotId = asset.spotId,
@@ -67,7 +69,7 @@ object AssetMapper {
                     camera = it.camera
                 )
             },
-            deviceLocation = asset.deviceLocation?.let {
+            deviceGeoLocation = asset.deviceGeoLocation?.let {
                 DeviceLocation(lat = it.lat, lng = it.lng)
             },
             assetStatus = asset.status,
@@ -78,17 +80,18 @@ object AssetMapper {
 
     fun toResponse(asset: Asset): AssetResponse =
         AssetResponse(
-            id = asset.id ?: "",
+            id = asset.id,
+            assetPublicId = asset.assetPublicId,
             ownerId = asset.ownerId,
             sessionId = asset.sessionId,
             spotId = asset.spotId,
             assetType = asset.type,
             assetStatus = asset.status,
             thumbUrl = asset.thumbnails.firstOrNull()?.storageKeyPath ?: "",
-            location = AssetLocation(
+            geoLocation = AssetLocation(
                 locationSource = asset.locationSource,
-                lat = (asset.exif?.lat ?: asset.deviceLocation?.lat)?.toString() ?: "",
-                lng = (asset.exif?.lng ?: asset.deviceLocation?.lng)?.toString() ?: ""
+                lat = (asset.exif?.lat ?: asset.deviceGeoLocation?.lat)?.toString() ?: "",
+                lng = (asset.exif?.lng ?: asset.deviceGeoLocation?.lng)?.toString() ?: ""
             ),
             createdAt = asset.createdAt ?: asset.updatedAt ?: Instant.now()
         )
