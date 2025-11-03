@@ -26,3 +26,6 @@ logging:
     root: INFO
     com.emat.vehicle_collector_service.client: DEBUG
     org.springframework.web.reactive.function.client: TRACE
+
+app:
+  tmp-dir: /app/tmp

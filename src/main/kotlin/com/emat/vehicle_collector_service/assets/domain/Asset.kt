@@ -4,6 +4,7 @@ import java.time.Instant
 
 data class Asset(
     val id: String?,
+    val assetPublicId: String,
     val ownerId: String,
     val sessionId: String?,
     val spotId: String?,
@@ -14,7 +15,7 @@ data class Asset(
     val storageKeyPath: String,
     val locationSource: LocationSource,
     val exif: ExifInfo?,
-    val deviceLocation: GeoPoint?,
+    val deviceGeoLocation: GeoPoint?,
     val thumbnails: List<ThumbnailInfo>,
     val createdAt: Instant?,
     val updatedAt: Instant?

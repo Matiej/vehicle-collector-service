@@ -1,8 +1,8 @@
 package com.emat.vehicle_collector_service.api.internal.dto
 
 import com.emat.vehicle_collector_service.assets.domain.AssetStatus
-import com.emat.vehicle_collector_service.assets.domain.LocationSource
 import com.emat.vehicle_collector_service.assets.domain.AssetType
+import com.emat.vehicle_collector_service.assets.domain.LocationSource
 import java.time.Instant
 
 data class AssetsResponse(
@@ -11,14 +11,15 @@ data class AssetsResponse(
 }
 
 data class AssetResponse(
-    val id: String,
+    val id: String?,
+    val assetPublicId: String,
     val ownerId: String,
     val sessionId: String?,
     val spotId: String?,
     val assetType: AssetType,
     val assetStatus: AssetStatus,
     val thumbUrl: String,
-    val location: AssetLocation,
+    val geoLocation: AssetLocation,
     val createdAt: Instant
 )
 

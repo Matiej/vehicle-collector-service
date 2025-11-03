@@ -14,6 +14,7 @@ import java.time.Instant
 data class AssetDocument(
     @Id
     val id: String?,
+    val assetPublicId: String,
     val ownerId: String,
     val sessionId: String?,
     val spotId: String?,
@@ -23,7 +24,7 @@ data class AssetDocument(
     val storageKeyPath: String,
     val locationSource: LocationSource = LocationSource.UNKNOWN,
     val exif: AssetMeta?,
-    val deviceLocation: DeviceLocation?,
+    val deviceGeoLocation: DeviceLocation?,
     val assetStatus: AssetStatus = AssetStatus.RAW,
     val thumbnails: List<Thumbnail> = emptyList(),
     @CreatedDate

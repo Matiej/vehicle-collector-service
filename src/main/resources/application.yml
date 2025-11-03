@@ -1,4 +1,6 @@
 spring:
+  server:
+    max-http-request-size: 15MB
   application:
     name: @project.name@
   output:
