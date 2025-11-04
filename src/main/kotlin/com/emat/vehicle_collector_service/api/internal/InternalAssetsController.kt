@@ -64,8 +64,10 @@ class InternalAssetsController(
     )
     @DeleteMapping("/assets/{assetId}")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    fun deleteById(@PathVariable assetId: String): Mono<Void> =
-        assetsService.deleteAsset(assetId)
+    fun deleteById(@PathVariable assetId: String): Mono<Void> {
+        log.info("Received DELETE request '/assets/{assetId}' for assetId: {}", assetId)
+        return assetsService.deleteAsset(assetId)
+    }
 
     @Operation(
         summary = "Internal GET endpoint to delete asset",

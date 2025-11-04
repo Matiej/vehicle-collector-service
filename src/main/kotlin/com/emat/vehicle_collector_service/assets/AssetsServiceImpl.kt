@@ -5,10 +5,12 @@ import com.emat.vehicle_collector_service.assets.infra.AssetRepository
 import com.emat.vehicle_collector_service.infrastructure.storage.StorageService
 import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.mono
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.LocalDate
+import kotlin.math.log
 
 @Service
 class AssetsServiceImpl(
@@ -18,7 +20,7 @@ class AssetsServiceImpl(
     val storage: StorageService
 ) : AssetsService {
     override fun getAllAssets(type: AssetType?, hasSpot: Boolean?, status: AssetStatus?): Flux<Asset> {
-        //todo when more assets filter on db level
+        //todo when more assets(10k pictures) filter on db level
         return assetRepository.findAll()
             .filter { asset ->
                 val typeOk = type?.let { asset.assetType == it } ?: true
@@ -30,7 +32,18 @@ class AssetsServiceImpl(
     }
 
     override fun deleteAsset(assetId: String): Mono<Void> {
-        return assetRepository.deleteById(assetId)
+        return assetRepository.findById(assetId)
+            .switchIfEmpty(
+                Mono.error(
+                    AssetUploadException(
+                        "Asset not found: $assetId",
+                        HttpStatus.NOT_FOUND,
+                        "ASSET_NOT_FOUND"
+                    )
+                )
+            )
+            .flatMap { storage.delete(it.storageKeyPath) }
+            .then(assetRepository.deleteById(assetId))
     }
 
     override fun saveAsset(assetRequest: AssetRequest): Mono<Asset> {
@@ -39,9 +52,10 @@ class AssetsServiceImpl(
         val filename = filePart.filename()
         val fileExtension = filename.substringAfterLast(".", "").lowercase()
         val storageKeyPath = generateStorageKeyPath(assetRequest.assetType, fileExtension)
-        return validator.assetUploadValidate(filePart)
+        return validator.assetUploadValidate(filePart, assetRequest.assetType)
             .flatMap { validatedFile ->
-                val exifMono = exifExtractor.extract(validatedFile.tmpFile, mime).defaultIfEmpty(ExifInfo(null, null, null, null))
+                val exifMono =
+                    exifExtractor.extract(validatedFile.tmpFile, mime).defaultIfEmpty(ExifInfo(null, null, null, null))
                 val storeMono = storage.store(validatedFile.tmpFile, storageKeyPath.first)
 
                 exifMono.zipWith(storeMono)
@@ -78,7 +92,7 @@ class AssetsServiceImpl(
         val publicId = generatePublicId("original")
         val storageKeyPath = assetType.name.lowercase() +
                 "/" + now.year.toString() +
-                "/" + now.month.toString() +
+                "/" + now.month.value.toString() +
                 "/" + publicId +
                 "." + extension
         return Pair(storageKeyPath, publicId)

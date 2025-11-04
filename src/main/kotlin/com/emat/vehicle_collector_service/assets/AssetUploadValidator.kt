@@ -1,5 +1,6 @@
 package com.emat.vehicle_collector_service.assets
 
+import com.emat.vehicle_collector_service.assets.domain.AssetType
 import com.emat.vehicle_collector_service.configuration.AppData
 import org.springframework.http.HttpStatus
 import org.springframework.http.codec.multipart.FilePart
@@ -10,6 +11,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.reflect.typeOf
 
 @Component
 class AssetUploadValidator(
@@ -22,7 +24,7 @@ class AssetUploadValidator(
         }
     }
 
-    fun assetUploadValidate(filePart: FilePart): Mono<ValidatedFile> {
+    fun assetUploadValidate(filePart: FilePart, assetType: AssetType): Mono<ValidatedFile> {
         val originalFileName = filePart.filename()
         val fileExtension = originalFileName.substringAfterLast('.', "").lowercase()
 
@@ -60,17 +62,23 @@ class AssetUploadValidator(
                         }
                         val header = FileInputStream(tmp).use { it.readNBytes(HEADER_MAX_SCAN_BYTES) }
                         val looksValid = when {
-                            mime == "image/jpeg" -> isJpeg(header)
-                            mime == "image/png" -> isPng(header)
-                            mime == "image/heic" || mime == "image/heif" -> isHeicFamily(header)
-                            mime == "audio/mpeg" -> isMp3(header)
-                            mime == "audio/mp4" || mime == "audio/x-m4a" || mime == "video/mp4" -> isMp4Family(header)
-                            mime == "audio/wav" -> isWav(header)
+                            mime == "image/jpeg" && assetType == AssetType.IMAGE -> isJpeg(header)
+                            mime == "image/png" && assetType == AssetType.IMAGE -> isPng(header)
+                            (mime == "image/heic" || mime == "image/heif") && assetType == AssetType.IMAGE -> isHeicFamily(
+                                header
+                            )
+
+                            mime == "audio/mpeg" && assetType == AssetType.AUDIO -> isMp3(header)
+                            (mime == "audio/mp4" || mime == "audio/x-m4a" || mime == "video/mp4") && assetType == AssetType.AUDIO -> isMp4Family(
+                                header
+                            )
+
+                            mime == "audio/wav" && assetType == AssetType.AUDIO -> isWav(header)
                             else -> false
                         }
                         if (!looksValid) {
                             throw AssetUploadException(
-                                "File signature is not equal Content-Type: $mime",
+                                "File signature Content-Type: $mime is not corresponding with file type: $assetType",
                                 HttpStatus.UNSUPPORTED_MEDIA_TYPE
                             )
                         }
@@ -85,7 +93,6 @@ class AssetUploadValidator(
                 }
         }
     }
-
 
     private fun isJpeg(h: ByteArray): Boolean =
         h.size >= 3 &&

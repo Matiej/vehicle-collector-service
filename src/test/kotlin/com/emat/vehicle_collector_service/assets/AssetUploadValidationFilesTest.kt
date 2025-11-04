@@ -1,5 +1,6 @@
 package com.emat.vehicle_collector_service.assets
 
+import com.emat.vehicle_collector_service.assets.domain.AssetType
 import com.emat.vehicle_collector_service.configuration.AppData
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -47,7 +48,7 @@ class AssetUploadValidationFilesTest {
     @Test
     fun `MP3 file validates correctly`() {
         val fp = filePart("sample.mp3", "audio/mpeg")
-        val result = validator.assetUploadValidate(fp).getOrThrow()
+        val result = validator.assetUploadValidate(fp, AssetType.AUDIO).getOrThrow()
         assertEquals("audio/mpeg", result.mimeType)
         assertEquals("mp3", result.extension)
         result.tmpFile.delete()
@@ -56,7 +57,7 @@ class AssetUploadValidationFilesTest {
     @Test
     fun `MP4 file validates correctly`() {
         val fp = filePart("sample.mp4", "audio/mp4")
-        val result = validator.assetUploadValidate(fp).getOrThrow()
+        val result = validator.assetUploadValidate(fp, AssetType.AUDIO).getOrThrow()
         assertEquals("mp4", result.extension)
         result.tmpFile.delete()
     }
@@ -64,7 +65,7 @@ class AssetUploadValidationFilesTest {
     @Test
     fun `JPEG file validates correctly`() {
         val fp = filePart("sample.jpg", "image/jpeg")
-        val result = validator.assetUploadValidate(fp).getOrThrow()
+        val result = validator.assetUploadValidate(fp, AssetType.IMAGE).getOrThrow()
         assertEquals("image/jpeg", result.mimeType)
         assertEquals("jpg", result.extension)
         assertTrue(result.tmpFile.exists())
@@ -74,7 +75,7 @@ class AssetUploadValidationFilesTest {
     @Test
     fun `PNG file validates correctly`() {
         val fp = filePart("sample.png", "image/png")
-        val result = validator.assetUploadValidate(fp).getOrThrow()
+        val result = validator.assetUploadValidate(fp, AssetType.IMAGE).getOrThrow()
         assertEquals("image/png", result.mimeType)
         assertEquals("png", result.extension)
         result.tmpFile.delete()
@@ -83,7 +84,7 @@ class AssetUploadValidationFilesTest {
     @Test
     fun `HEIC file validates correctly`() {
         val fp = filePart("sample.heic", "image/heic")
-        val result = validator.assetUploadValidate(fp).getOrThrow()
+        val result = validator.assetUploadValidate(fp, AssetType.IMAGE).getOrThrow()
         assertTrue(result.mimeType == "image/heic" || result.mimeType == "image/heif")
         assertEquals("heic", result.extension)
         result.tmpFile.delete()
@@ -92,14 +93,14 @@ class AssetUploadValidationFilesTest {
     @Test
     fun `Wrong MIME type should throw`() {
         val fp = filePart("sample.jpg", "image/png")
-        val ex = assertThrows<AssetUploadException> { validator.assetUploadValidate(fp).getOrThrow() }
+        val ex = assertThrows<AssetUploadException> { validator.assetUploadValidate(fp, AssetType.IMAGE).getOrThrow() }
         assertEquals(org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE, ex.status)
     }
 
     @Test
     fun `Unsupported extension should throw`() {
         val badPart = TestFilePart("file.txt", headersOf("text/plain"), loadFileBytes("sample.jpg"))
-        val ex = assertThrows<AssetUploadException> { validator.assetUploadValidate(badPart).getOrThrow() }
+        val ex = assertThrows<AssetUploadException> { validator.assetUploadValidate(badPart, AssetType.AUDIO).getOrThrow() }
         assertEquals(org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE, ex.status)
     }
 
@@ -111,7 +112,7 @@ class AssetUploadValidationFilesTest {
         bytes[1] = 0xD8.toByte()
         bytes[2] = 0xFF.toByte()
         val part = TestFilePart("big.jpg", headersOf("image/jpeg"), bytes)
-        val ex = assertThrows<AssetUploadException> { validator.assetUploadValidate(part).getOrThrow() }
+        val ex = assertThrows<AssetUploadException> { validator.assetUploadValidate(part, AssetType.IMAGE).getOrThrow() }
         assertEquals(org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE, ex.status)
     }
 

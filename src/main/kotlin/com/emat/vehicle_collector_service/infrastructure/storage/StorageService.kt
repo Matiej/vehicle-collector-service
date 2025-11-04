@@ -7,4 +7,5 @@ import java.io.File
 interface StorageService {
     fun store(filePart: FilePart, storageKeyPath: String): Mono<String>
     fun store(file: File, storageKeyPath: String): Mono<String>
+    fun delete(storageKeyPath: String): Mono<Void>
 }

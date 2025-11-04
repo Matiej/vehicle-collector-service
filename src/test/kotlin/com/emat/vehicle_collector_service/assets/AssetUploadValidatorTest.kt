@@ -1,5 +1,6 @@
 package com.emat.vehicle_collector_service.assets
 
+import com.emat.vehicle_collector_service.assets.domain.AssetType
 import com.emat.vehicle_collector_service.configuration.AppData
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
@@ -63,7 +64,7 @@ class AssetUploadValidatorTest {
         val fp = filePartMock("img.jpg", "image/jpeg", AssetUploadValidatorFixtures.JPEG_magicBytes)
 
         //when
-        val validated =   validator.assetUploadValidate(fp).getOrThrow()
+        val validated = validator.assetUploadValidate(fp, AssetType.IMAGE).getOrThrow()
 
         //then
         assertEquals("image/jpeg", validated.mimeType)
@@ -80,7 +81,7 @@ class AssetUploadValidatorTest {
         val fp = filePartMock("clip.mp4", "audio/mp4", AssetUploadValidatorFixtures.MP4_magicBytes)
 
         //when
-        val validated =     validator.assetUploadValidate(fp).getOrThrow()
+        val validated = validator.assetUploadValidate(fp, AssetType.AUDIO).getOrThrow()
 
         //then
         assertEquals("audio/mp4", validated.mimeType)
@@ -95,7 +96,7 @@ class AssetUploadValidatorTest {
         val fp = filePartMock("photo.heic", "image/heic", AssetUploadValidatorFixtures.HEIC_magicBytes)
 
         //when
-        val validated =    validator.assetUploadValidate(fp) .getOrThrow()
+        val validated = validator.assetUploadValidate(fp, AssetType.IMAGE).getOrThrow()
 
         //then
         assertEquals("image/heic", validated.mimeType)
@@ -108,7 +109,7 @@ class AssetUploadValidatorTest {
     fun `mismatch signature vs content-type - reject`() {
         val fp = filePartMock("img.png", "image/png", AssetUploadValidatorFixtures.JPEG_magicBytes)
         val ex = assertThrows(AssetUploadException::class.java) {
-               validator.assetUploadValidate(fp).getOrThrow()
+            validator.assetUploadValidate(fp, AssetType.AUDIO).getOrThrow()
         }
         assertEquals(org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE, ex.status)
     }
@@ -118,7 +119,7 @@ class AssetUploadValidatorTest {
         val big = randomBytes((10 * 1024 * 1024) + 1) // 10MB + 1 bite
         val fp = filePartMock("img.jpg", "image/jpeg", big)
         val ex = assertThrows(AssetUploadException::class.java) {
-              validator.assetUploadValidate(fp).getOrThrow()
+            validator.assetUploadValidate(fp, AssetType.IMAGE).getOrThrow()
         }
         assertEquals(org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE, ex.status)
     }
@@ -127,7 +128,7 @@ class AssetUploadValidatorTest {
     fun `bad extension - reject`() {
         val fp = filePartMock("evil.exe", "application/octet-stream", randomBytes(32))
         val ex = assertThrows(AssetUploadException::class.java) {
-            validator.assetUploadValidate(fp).getOrThrow()
+            validator.assetUploadValidate(fp, AssetType.AUDIO).getOrThrow()
         }
         assertEquals(org.springframework.http.HttpStatus.UNSUPPORTED_MEDIA_TYPE, ex.status)
     }
@@ -137,7 +138,7 @@ class AssetUploadValidatorTest {
         //given
         val fp = filePartMock("img.jpg", "application/pdf", AssetUploadValidatorFixtures.JPEG_magicBytes)
         val ex = assertThrows(AssetUploadException::class.java) {
-                validator.assetUploadValidate(fp).getOrThrow()
+            validator.assetUploadValidate(fp, AssetType.IMAGE).getOrThrow()
         }
 
         //when then

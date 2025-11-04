@@ -28,4 +28,5 @@ logging:
     org.springframework.web.reactive.function.client: TRACE
 
 app:
-  tmp-dir: /app/tmp
+  tmp-assets-dir: /app/tmp_assets
+  assets-dir: /app/assets
