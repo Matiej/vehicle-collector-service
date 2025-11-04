@@ -19,3 +19,5 @@ springdoc:
 app:
   version: @project.version@
   name: @project.name@
+  tmp-assets-dir: "./assets_tmp"
+  assets-dir: "./assets"
