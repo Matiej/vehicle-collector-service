@@ -2,10 +2,7 @@ package com.emat.vehicle_collector_service.assets
 
 import com.emat.vehicle_collector_service.api.internal.dto.AssetLocation
 import com.emat.vehicle_collector_service.api.internal.dto.AssetResponse
-import com.emat.vehicle_collector_service.assets.domain.Asset
-import com.emat.vehicle_collector_service.assets.domain.ExifInfo
-import com.emat.vehicle_collector_service.assets.domain.GeoPoint
-import com.emat.vehicle_collector_service.assets.domain.ThumbnailInfo
+import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetMeta
 import com.emat.vehicle_collector_service.assets.infra.DeviceLocation
@@ -40,7 +37,7 @@ object AssetMapper {
             },
             thumbnails = assetDocument.thumbnails.map {
                 ThumbnailInfo(
-                    size = it.size ?: "",
+                    size = it.size ?: ThumbnailSize.THUMB_320,
                     storageKeyPath = it.storageKeyPath ?: ""
                 )
             },

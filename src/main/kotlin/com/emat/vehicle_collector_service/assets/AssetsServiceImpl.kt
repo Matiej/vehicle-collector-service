@@ -2,15 +2,13 @@ package com.emat.vehicle_collector_service.assets
 
 import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
+import com.emat.vehicle_collector_service.assets.infra.Thumbnail
 import com.emat.vehicle_collector_service.infrastructure.storage.StorageService
-import kotlinx.coroutines.reactive.awaitSingle
-import kotlinx.coroutines.reactor.mono
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.LocalDate
-import kotlin.math.log
 
 @Service
 class AssetsServiceImpl(
@@ -44,6 +42,21 @@ class AssetsServiceImpl(
             )
             .flatMap { storage.delete(it.storageKeyPath) }
             .then(assetRepository.deleteById(assetId))
+    }
+
+    override fun findBySessionId(sessionId: String): Flux<Asset> {
+        return assetRepository.findBySessionId(sessionId)
+            .map { AssetMapper.toDomain(it) }
+    }
+
+    override fun countAllBySessionId(sessionId: String): Mono<Int> {
+        return assetRepository.countAllBySessionId(sessionId)
+    }
+
+    override fun findFirstAssetThumbnail320BySessionId(sessionId: String): Mono<ThumbnailInfo> {
+        return assetRepository.findFirstBySessionIdOrderByCreatedAtAsc(sessionId)
+            .flatMap { asset -> Mono.just(asset.thumbnails.filter { it.size == ThumbnailSize.THUMB_320 }.first()) }
+            .map { ThumbnailInfo(it.size!!, it.storageKeyPath!!) }
     }
 
     override fun saveAsset(assetRequest: AssetRequest): Mono<Asset> {
