@@ -3,6 +3,7 @@ package com.emat.vehicle_collector_service.assets.infra
 import com.emat.vehicle_collector_service.assets.domain.AssetStatus
 import com.emat.vehicle_collector_service.assets.domain.AssetType
 import com.emat.vehicle_collector_service.assets.domain.LocationSource
+import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.LastModifiedDate
@@ -55,6 +56,6 @@ data class DeviceLocation(
 )
 
 data class Thumbnail(
-    val size: String?,
+    val size: ThumbnailSize?,
     val storageKeyPath: String?
 )

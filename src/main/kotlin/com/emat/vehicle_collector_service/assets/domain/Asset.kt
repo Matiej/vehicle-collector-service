@@ -19,9 +19,7 @@ data class Asset(
     val thumbnails: List<ThumbnailInfo>,
     val createdAt: Instant?,
     val updatedAt: Instant?
-) {
-
-}
+)
 
 data class ExifInfo(
     val takenAt: Instant?,
@@ -36,6 +34,6 @@ data class GeoPoint(
 )
 
 data class ThumbnailInfo(
-    val size: String,
+    val size: ThumbnailSize,
     val storageKeyPath: String
 )
