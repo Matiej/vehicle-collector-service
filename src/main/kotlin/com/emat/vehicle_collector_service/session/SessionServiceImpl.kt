@@ -47,22 +47,29 @@ class SessionServiceImpl(
 
 
     override fun listSessions(ownerId: String, page: Int, size: Int): Flux<SessionSummaryResponse> =
-        sessionRepository.findByOwnerId(ownerId, pageRequest(page, size))
-            .flatMap { session ->
-                assetService.countAllBySessionId(sessionId = session.id!!).map { cnt -> session to cnt }
-            }.flatMap { (sessiion, numberOfAssets) ->
-                assetService.findFirstAssetThumbnail320BySessionId(sessiion.id!!)
-                    .map { thumb320->
-                        SessionSummaryResponse(
-                            sessionId = sessiion.id,
-                            sessionMode = sessiion.sessionMode,
-                            ownerId = sessiion.ownerId,
-                            assetsCount = numberOfAssets,
-                            coverThumbnailUrl = thumb320.storageKeyPath,
-                            createdAt = sessiion.createdAt.toString()
-                        )
-                    }
-            }
+        findSessionsAssets(sessionRepository.findByOwnerId(ownerId, pageRequest(page, size)))
+
+
+    override fun listSessions(page: Int, size: Int): Flux<SessionSummaryResponse> =
+        findSessionsAssets(sessionRepository.findAll())
+
+    private fun findSessionsAssets(sessionDocuments: Flux<SessionDocument>): Flux<SessionSummaryResponse> {
+        return sessionDocuments.flatMap { session ->
+            assetService.countAllBySessionId(sessionId = session.id!!).map { cnt -> session to cnt }
+        }.flatMap { (session, numberOfAssets) ->
+            assetService.findFirstAssetThumbnail320BySessionId(session.id!!)
+                .map { thumb320 ->
+                    SessionSummaryResponse(
+                        sessionId = session.id,
+                        sessionMode = session.sessionMode,
+                        ownerId = session.ownerId,
+                        assetsCount = numberOfAssets,
+                        coverThumbnailUrl = thumb320.storageKeyPath,
+                        createdAt = session.createdAt.toString()
+                    )
+                }
+        }
+    }
 
     private fun toSessionResponse(sessionDocument: SessionDocument): Mono<SessionResponse> =
         assetService.findBySessionId(sessionDocument.id!!)
@@ -90,7 +97,7 @@ class SessionServiceImpl(
     private fun pageRequest(page: Int, size: Int) = PageRequest.of(page, size)
 
     private fun genPublicId(prefix: String): String {
-      val now = LocalDate.now()
-      return "${prefix}_${now.year}_${now.month.value}_${UUID.randomUUID().toString().take(8)}"
+        val now = LocalDate.now()
+        return "${prefix}_${now.year}_${now.month.value}_${UUID.randomUUID().toString().take(8)}"
     }
 }

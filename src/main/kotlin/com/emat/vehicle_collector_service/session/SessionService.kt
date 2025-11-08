@@ -10,4 +10,5 @@ interface SessionService {
     fun createSession(req: CreateSessionRequest): Mono<SessionResponse>
     fun getSession(sessionId: String): Mono<SessionResponse>
     fun listSessions(ownerId: String, page: Int, size: Int): Flux<SessionSummaryResponse>
+    fun listSessions(page: Int, size: Int): Flux<SessionSummaryResponse>
 }

@@ -1,7 +1,7 @@
 package com.emat.vehicle_collector_service.api.internal.dto
 
 import com.emat.vehicle_collector_service.session.domain.SessionAsset
-import com.emat.vehicle_collector_service.session.domain.SessionAssetStatus
+import com.emat.vehicle_collector_service.session.domain.SessionStatus
 import com.emat.vehicle_collector_service.session.domain.SessionMode
 
 data class SessionResponse(
@@ -9,7 +9,7 @@ data class SessionResponse(
     val mode: SessionMode,
     val ownerId: String,
     val spotId: String?,                  // only for spot in the future
-    val status: SessionAssetStatus,                   // CREATED/INGESTING/INGESTED
+    val status: SessionStatus,                   // CREATED/INGESTING/INGESTED
     val createdAt: String,
     val assets: List<SessionAsset>
 ) {

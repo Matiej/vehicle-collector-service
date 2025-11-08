@@ -1,6 +1,6 @@
 package com.emat.vehicle_collector_service.session.infra
 
-import com.emat.vehicle_collector_service.session.domain.SessionAssetStatus
+import com.emat.vehicle_collector_service.session.domain.SessionStatus
 import com.emat.vehicle_collector_service.session.domain.SessionMode
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.Id
@@ -17,7 +17,7 @@ data class SessionDocument(
     val ownerId: String,
     val sessionMode: SessionMode,
     val spotId: String? = null,
-    val status: SessionAssetStatus = SessionAssetStatus.CREATED,
+    val status: SessionStatus = SessionStatus.CREATED,
     @CreatedDate
     var createdAt: Instant? = null,
     @LastModifiedDate
