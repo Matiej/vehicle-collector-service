@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Sort
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -33,13 +34,14 @@ class InternalSessionController(
     @GetMapping("/sessions")
     fun listAll(
         @RequestParam(defaultValue = "0") page: Int,
-        @RequestParam(defaultValue = "50") size: Int
+        @RequestParam(defaultValue = "50") size: Int,
+        @RequestParam(defaultValue = "DESC") sortDir: Sort.Direction
     ): Flux<SessionSummaryResponse> {
         log.info(
             "Received GET request '/api/internal/sessions' for page: {}, size: {}.",
             page, size
         )
-        return sessionService.listSessions(page, size)
+        return sessionService.listSessions(page, size, sortDir)
     }
 
 }

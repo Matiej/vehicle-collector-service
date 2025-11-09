@@ -56,6 +56,6 @@ data class DeviceLocation(
 )
 
 data class Thumbnail(
-    val size: ThumbnailSize?,
-    val storageKeyPath: String?
+    val size: ThumbnailSize,
+    val storageKeyPath: String
 )

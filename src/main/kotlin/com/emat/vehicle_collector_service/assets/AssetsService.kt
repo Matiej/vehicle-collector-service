@@ -11,6 +11,6 @@ interface AssetsService {
     fun saveAsset(assetRequest: AssetRequest): Mono<Asset>
 
     fun findBySessionId(sessionId: String): Flux<Asset>
-    fun countAllBySessionId(sessionId: String): Mono<Int>
-    fun findFirstAssetThumbnail320BySessionId(sessionId: String): Mono<ThumbnailInfo>
+    fun countAllBySessionId(sessionId: String): Mono<Long>
+    fun findLastAssetThumbnail320BySessionId(sessionId: String): Mono<ThumbnailInfo>
 }
