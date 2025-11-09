@@ -9,4 +9,5 @@ import reactor.core.publisher.Flux
 interface SessionRepository: ReactiveMongoRepository<SessionDocument, String> {
     fun findByOwnerId(ownerId: String): Flux<SessionDocument>
     fun findByOwnerId(ownerId: String, pageRequest: PageRequest): Flux<SessionDocument>
+    fun findAllBy(pageRequest: PageRequest): Flux<SessionDocument>
 }

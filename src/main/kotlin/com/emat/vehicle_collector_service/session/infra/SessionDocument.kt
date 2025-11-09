@@ -17,12 +17,13 @@ data class SessionDocument(
     val ownerId: String,
     val sessionMode: SessionMode,
     val spotId: String? = null,
-    val status: SessionStatus = SessionStatus.CREATED,
+    var status: SessionStatus = SessionStatus.CREATED,
     @CreatedDate
     var createdAt: Instant? = null,
     @LastModifiedDate
     var updatedAt: Instant? = null,
     @Version
     var version: Long? = null
+
 
 )

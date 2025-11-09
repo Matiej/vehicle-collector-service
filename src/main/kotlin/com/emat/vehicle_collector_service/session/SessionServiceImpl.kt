@@ -7,9 +7,11 @@ import com.emat.vehicle_collector_service.assets.AssetUploadException
 import com.emat.vehicle_collector_service.assets.AssetsService
 import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
 import com.emat.vehicle_collector_service.session.domain.SessionAsset
+import com.emat.vehicle_collector_service.session.domain.SessionStatus
 import com.emat.vehicle_collector_service.session.infra.SessionDocument
 import com.emat.vehicle_collector_service.session.infra.SessionRepository
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -46,25 +48,68 @@ class SessionServiceImpl(
             .flatMap { toSessionResponse(it) }
 
 
-    override fun listSessions(ownerId: String, page: Int, size: Int): Flux<SessionSummaryResponse> =
-        findSessionsAssets(sessionRepository.findByOwnerId(ownerId, pageRequest(page, size)))
+    override fun listSessions(
+        ownerId: String,
+        page: Int,
+        size: Int,
+        sort: Sort.Direction
+    ): Flux<SessionSummaryResponse> =
+        findSessionsAssets(
+            sessionRepository.findByOwnerId(
+                ownerId,
+                pageRequest(
+                    page,
+                    size,
+                    Sort.by(sort, "createdAt")
+                )
+            )
+        )
 
 
-    override fun listSessions(page: Int, size: Int): Flux<SessionSummaryResponse> =
-        findSessionsAssets(sessionRepository.findAll())
+    override fun listSessions(page: Int, size: Int, sort: Sort.Direction): Flux<SessionSummaryResponse> =
+        findSessionsAssets(
+            sessionRepository.findAllBy(
+                pageRequest(
+                    page,
+                    size,
+                    Sort.by(sort, "createdAt")
+                )
+            )
+        )
+
+    override fun changeSessionStatus(sessionId: String, sessionStatus: SessionStatus): Mono<SessionResponse> {
+        return sessionRepository.findById(sessionId)
+            .map { doc ->
+                doc.status = sessionStatus
+                doc
+            }.switchIfEmpty(
+                Mono.error(
+                    AssetUploadException(
+                        "Can't find session: $sessionId for upload",
+                        HttpStatus.NOT_FOUND
+                    )
+                )
+            ).flatMap { sessionRepository.save(it) }
+            .flatMap { toSessionResponse(it) }
+    }
 
     private fun findSessionsAssets(sessionDocuments: Flux<SessionDocument>): Flux<SessionSummaryResponse> {
         return sessionDocuments.flatMap { session ->
-            assetService.countAllBySessionId(sessionId = session.id!!).map { cnt -> session to cnt }
+            assetService.countAllBySessionId(sessionId = session.id!!)
+                .defaultIfEmpty(0L)
+                .map { cnt -> session to cnt }
         }.flatMap { (session, numberOfAssets) ->
-            assetService.findFirstAssetThumbnail320BySessionId(session.id!!)
+            assetService.findLastAssetThumbnail320BySessionId(session.id!!)
+                .map { it.storageKeyPath }
+                .defaultIfEmpty("")
                 .map { thumb320 ->
                     SessionSummaryResponse(
                         sessionId = session.id,
                         sessionMode = session.sessionMode,
                         ownerId = session.ownerId,
-                        assetsCount = numberOfAssets,
-                        coverThumbnailUrl = thumb320.storageKeyPath,
+                        assetsCount = numberOfAssets.toInt(),
+                        coverThumbnailUrl = if (thumb320.isEmpty()) null else thumb320,
+                        sessionStatus = session.status,
                         createdAt = session.createdAt.toString()
                     )
                 }
@@ -94,7 +139,7 @@ class SessionServiceImpl(
                 )
             }
 
-    private fun pageRequest(page: Int, size: Int) = PageRequest.of(page, size)
+    private fun pageRequest(page: Int, size: Int, sort: Sort) = PageRequest.of(page, size, sort)
 
     private fun genPublicId(prefix: String): String {
         val now = LocalDate.now()
