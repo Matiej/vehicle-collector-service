@@ -92,4 +92,22 @@ object AssetMapper {
             ),
             createdAt = asset.createdAt ?: asset.updatedAt ?: Instant.now()
         )
+
+    fun toAssetResponse(assetDocument: AssetDocument): AssetResponse =
+        AssetResponse(
+            id = assetDocument.id,
+            assetPublicId = assetDocument.assetPublicId,
+            ownerId = assetDocument.ownerId,
+            sessionId = assetDocument.sessionId,
+            spotId = assetDocument.spotId,
+            assetType = assetDocument.assetType,
+            assetStatus = assetDocument.assetStatus,
+            thumbUrl = assetDocument.thumbnails.firstOrNull()?.storageKeyPath ?: "",
+            geoLocation = AssetLocation(
+                locationSource = assetDocument.locationSource,
+                lat = (assetDocument.exif?.lat ?: assetDocument.deviceGeoLocation?.lat)?.toString() ?: "",
+                lng = (assetDocument.exif?.lng ?: assetDocument.deviceGeoLocation?.lng)?.toString() ?: ""
+            ),
+            createdAt = assetDocument.createdAt ?: assetDocument.updatedAt ?: Instant.now()
+        )
 }

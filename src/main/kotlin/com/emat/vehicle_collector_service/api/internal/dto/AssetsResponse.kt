@@ -6,7 +6,11 @@ import com.emat.vehicle_collector_service.assets.domain.LocationSource
 import java.time.Instant
 
 data class AssetsResponse(
-    val assets: List<AssetResponse>
+    val assets: List<AssetResponse>,
+    val page: Int?,
+    val size: Int?,
+    val totalCount: Int?,
+    val totalPages: Int?
 ) {
 }
 

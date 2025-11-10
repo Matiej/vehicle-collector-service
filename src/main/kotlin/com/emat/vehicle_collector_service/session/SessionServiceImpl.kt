@@ -117,7 +117,7 @@ class SessionServiceImpl(
     }
 
     private fun toSessionResponse(sessionDocument: SessionDocument): Mono<SessionResponse> =
-        assetService.findBySessionId(sessionDocument.id!!)
+        assetService.getAllAssetsBySessionId(sessionDocument.id!!)
             .map {
                 SessionAsset(
                     id = it.id!!,

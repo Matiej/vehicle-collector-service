@@ -1,8 +1,17 @@
 package com.emat.vehicle_collector_service.assets
 
+import com.emat.vehicle_collector_service.api.internal.dto.AssetResponse
+import com.emat.vehicle_collector_service.api.internal.dto.AssetsOwnerQuery
+import com.emat.vehicle_collector_service.api.internal.dto.AssetsResponse
 import com.emat.vehicle_collector_service.assets.domain.*
+import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
 import com.emat.vehicle_collector_service.infrastructure.storage.StorageService
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate
+import org.springframework.data.mongodb.core.query.Criteria
+import org.springframework.data.mongodb.core.query.Query
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -11,21 +20,70 @@ import java.time.LocalDate
 
 @Service
 class AssetsServiceImpl(
-    val assetRepository: AssetRepository,
-    val validator: AssetUploadValidator,
-    val exifExtractor: ExifMetadataExtractor,
-    val storage: StorageService
+    private val assetRepository: AssetRepository,
+    private val template: ReactiveMongoTemplate,
+    private val validator: AssetUploadValidator,
+    private val exifExtractor: ExifMetadataExtractor,
+    private val storage: StorageService
 ) : AssetsService {
-    override fun getAllAssets(type: AssetType?, hasSpot: Boolean?, status: AssetStatus?): Flux<Asset> {
-        //todo when more assets(10k pictures) filter on db level
-        return assetRepository.findAll()
-            .filter { asset ->
-                val typeOk = type?.let { asset.assetType == it } ?: true
-                val hasSpotOk = hasSpot?.let { asset.spotId != null } ?: true
-                val statusOk = status?.let { asset.assetStatus == status } ?: true
-                typeOk && hasSpotOk && statusOk
+    override fun getAllAssets(assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
+        val pageRequest = pageRequest(assetsOwnerQuery)
+        var criteria = emptyList<Criteria>()
+        assetsOwnerQuery.type?.let { criteria += Criteria.where("assetType").`is`(it) }
+        assetsOwnerQuery.status?.let { criteria += Criteria.where("assetStatus").`is`(it) }
+        assetsOwnerQuery.hasSpot?.let { want ->
+            criteria += if (want) Criteria.where("spotId").ne(null)
+            else Criteria.where("spotId").`is`(null)
+        }
+
+        val query = Query().addCriteria(Criteria().andOperator(*criteria.toTypedArray()))
+            .with(pageRequest)
+
+        return template.find(query, AssetDocument::class.java)
+            .map { AssetMapper.toAssetResponse(it) }
+            .collectList()
+            .map { assets ->
+                val totalCount = assets.size
+                val pages = getNumberOfPages(totalCount, assetsOwnerQuery.size)
+                AssetsResponse(
+                    assets = assets,
+                    page = assetsOwnerQuery.page,
+                    size = assetsOwnerQuery.size,
+                    totalCount = totalCount,
+                    totalPages = pages
+                )
             }
-            .map { AssetMapper.toDomain(it) }
+    }
+
+    override fun getAllAssetsByOwnerId(ownerId: String, assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
+        val pageRequest = pageRequest(assetsOwnerQuery)
+        val criteria = mutableListOf(
+            Criteria.where("ownerId").`is`(ownerId)
+        )
+        assetsOwnerQuery.type?.let { criteria += Criteria.where("assetType").`is`(it) }
+        assetsOwnerQuery.status?.let { criteria += Criteria.where("assetStatus").`is`(it) }
+        assetsOwnerQuery.hasSpot?.let { want ->
+            criteria += if (want) Criteria.where("spotId").ne(null)
+            else Criteria.where("spotId").`is`(null)
+        }
+
+        val query = Query().addCriteria(Criteria().andOperator(*criteria.toTypedArray()))
+            .with(pageRequest)
+
+        return template.find(query, AssetDocument::class.java)
+            .map { AssetMapper.toAssetResponse(it) }
+            .collectList()
+            .map { assets ->
+                val totalCount = assets.size
+                val pages = getNumberOfPages(totalCount, assetsOwnerQuery.size)
+                AssetsResponse(
+                    assets = assets,
+                    page = assetsOwnerQuery.page,
+                    size = assetsOwnerQuery.size,
+                    totalCount = totalCount,
+                    totalPages = pages
+                )
+            }
     }
 
     override fun deleteAsset(assetId: String): Mono<Void> {
@@ -43,10 +101,33 @@ class AssetsServiceImpl(
             .then(assetRepository.deleteById(assetId))
     }
 
-    override fun findBySessionId(sessionId: String): Flux<Asset> {
-        return assetRepository.findBySessionId(sessionId)
-            .map { AssetMapper.toDomain(it) }
+    override fun getAllAssetsBySessionId(sessionId: String, assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
+        val pageRequest = pageRequest(assetsOwnerQuery)
+        return assetRepository.findBySessionId(sessionId, pageRequest)
+            .map { AssetMapper.toAssetResponse(it) }
+            .collectList()
+            .map { assets ->
+                AssetsResponse(
+                    assets = assets,
+                    page = null,
+                    size = null,
+                    totalCount = null,
+                    totalPages = null
+                )
+            }
     }
+
+    private fun pageRequest(assetsOwnerQuery: AssetsOwnerQuery): PageRequest {
+        val pageRequest = PageRequest.of(
+            assetsOwnerQuery.page,
+            assetsOwnerQuery.size, Sort.by(assetsOwnerQuery.sortDir, "createdAt")
+        )
+        return pageRequest
+    }
+
+    override fun getAllAssetsBySessionId(sessionId: String): Flux<Asset> =
+        assetRepository.findBySessionId(sessionId)
+            .map { AssetMapper.toDomain(it) }
 
     override fun countAllBySessionId(sessionId: String): Mono<Long> {
         return assetRepository.countAllBySessionId(sessionId)
@@ -62,7 +143,7 @@ class AssetsServiceImpl(
             .map { ThumbnailInfo(size = it.size, storageKeyPath = it.storageKeyPath) }
     }
 
-    override fun saveAsset(assetRequest: AssetRequest): Mono<Asset> {
+    override fun saveAsset(assetRequest: AssetRequest): Mono<AssetResponse> {
         val filePart = assetRequest.filePart
         val mime = filePart.headers().contentType?.toString()?.lowercase()
         val filename = filePart.filename()
@@ -98,12 +179,12 @@ class AssetsServiceImpl(
                         )
                         assetRepository.save(AssetMapper.toDocument(asset))
                     }
-                    .map(AssetMapper::toDomain)
+                    .map(AssetMapper::toAssetResponse)
                     .doFinally { _ -> validatedFile.tmpFile.delete() }
             }
     }
 
-    fun generateStorageKeyPath(assetType: AssetType, extension: String): Pair<String, String> {
+    private fun generateStorageKeyPath(assetType: AssetType, extension: String): Pair<String, String> {
         val now = LocalDate.now()
         val publicId = generatePublicId("original")
         val storageKeyPath = assetType.name.lowercase() +
@@ -114,7 +195,12 @@ class AssetsServiceImpl(
         return Pair(storageKeyPath, publicId)
     }
 
-    fun generatePublicId(type: String): String =
-        "asset_" + java.time.LocalDate.now().year + "_" + type + "_" +
+    private fun generatePublicId(type: String): String =
+        "asset_" + LocalDate.now().year + "_" + type + "_" +
                 java.util.UUID.randomUUID().toString().take(8)
+
+    private fun getNumberOfPages(totalCount: Int, pageSize: Int): Int {
+        val pages: Double = (totalCount.toDouble() / pageSize.toDouble())
+        return if (pages - pages.toInt() > 0) (pages + 1).toInt() else pages.toInt()
+    }
 }
