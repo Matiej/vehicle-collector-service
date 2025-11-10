@@ -1,6 +1,7 @@
 package com.emat.vehicle_collector_service.api.internal
 
 import com.emat.vehicle_collector_service.api.internal.dto.AssetResponse
+import com.emat.vehicle_collector_service.api.internal.dto.AssetsOwnerQuery
 import com.emat.vehicle_collector_service.api.internal.dto.AssetsResponse
 import com.emat.vehicle_collector_service.assets.AssetMapper
 import com.emat.vehicle_collector_service.assets.AssetsService
@@ -38,18 +39,13 @@ class InternalAssetsController(
     )
     @GetMapping("/assets")
     fun allAssets(
-        @RequestParam(name = "status", required = false) status: AssetStatus?,
-        @RequestParam(name = "hasSpot", required = false) hasSpot: Boolean?,
-        @RequestParam(name = "type", required = false) type: AssetType?
+        @ModelAttribute query: AssetsOwnerQuery,
     ): Mono<AssetsResponse> {
         log.info(
-            "Received GET request '/api/internal/assets' for status: {}, type: {}, hasSpot={} parameters ",
-            status, type, hasSpot
+            "Received GET '/api/internal/assets'  status={}, type={}, hasSpot={}, page={}, size={}, sort={}",
+            query.status, query.type, query.hasSpot, query.page, query.size, query.sortDir
         )
-        return assetsService.getAllAssets(type, hasSpot, status)
-            .map { asset -> AssetMapper.toResponse(asset) }
-            .collectList()
-            .map { resposnes -> AssetsResponse(resposnes) }
+        return assetsService.getAllAssets(query)
     }
 
     @Operation(
@@ -65,13 +61,13 @@ class InternalAssetsController(
     @DeleteMapping("/assets/{assetId}")
     @ResponseStatus(HttpStatus.ACCEPTED)
     fun deleteById(@PathVariable assetId: String): Mono<Void> {
-        log.info("Received DELETE request '/assets/{assetId}' for assetId: {}", assetId)
+        log.info("Received DELETE request '/api/internal/assets/{assetId}' for assetId: {}", assetId)
         return assetsService.deleteAsset(assetId)
     }
 
     @Operation(
-        summary = "Internal GET endpoint to delete asset",
-        description = "Delete asset by assetID. Internal endpoint for web usage, no jwt needed"
+        summary = "Internal POST endpoint to create asset",
+        description = "Create asset for sessionId. Internal endpoint for web usage, no jwt needed"
     )
     @ApiResponses(
         value = [ApiResponse(
@@ -88,18 +84,20 @@ class InternalAssetsController(
         @RequestParam("type") type: AssetType
     ): Mono<AssetResponse> {
         log.info(
-            "Received POST request '/sessions/{sessionId}/assets' sessionsId: {}. ownerId: {}, type: {}, fileName: {}",
+            "Received POST request '/api/internal/sessions/{sessionId}/assets' sessionsId: {}. ownerId: {}, type: {}, fileName: {}",
             sessionId,
             ownerId,
             type.name,
             filePart.filename()
+        )
+        return assetsService.saveAsset(
+            AssetRequest(
+                sessionId = sessionId,
+                filePart = filePart,
+                ownerId = ownerId,
+                assetType = type
             )
-        return assetsService.saveAsset(AssetRequest(
-            sessionId = sessionId,
-            filePart = filePart,
-            ownerId =ownerId,
-            assetType = type
-        )).map { AssetMapper.toResponse(it) }
+        )
     }
 
 
