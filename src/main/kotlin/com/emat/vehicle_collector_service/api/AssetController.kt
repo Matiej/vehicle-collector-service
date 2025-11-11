@@ -42,7 +42,7 @@ class AssetController(
         @RequestParam("type") type: AssetType
     ): Mono<AssetResponse> {
         log.info(
-            "Received POST request '/sessions/{sessionId}/assets' sessionsId: {}. ownerId: {}, type: {}, fileName: {}",
+            "Received POST request '/api/public/sessions/{sessionId}/assets' sessionsId: {}. ownerId: {}, type: {}, fileName: {}",
             sessionId,
             ownerId,
             type.name,
@@ -74,7 +74,7 @@ class AssetController(
         @ModelAttribute query: AssetsOwnerQuery,
     ): Mono<AssetsResponse> {
         log.info(
-            "Received GET '/api/public/assets/ownerId' ownerId={}, status={}, type={}, hasSpot={}, page={}, size={}, sort={}",
+            "Received GET '/api/public/assets/owner/{ownerId}', ownerId={}, status={}, type={}, hasSpot={}, page={}, size={}, sort={}",
             ownerId, query.status, query.type, query.hasSpot, query.page, query.size, query.sortDir
         )
         return assetsService.getAllAssetsByOwnerId(ownerId, query)
@@ -97,7 +97,7 @@ class AssetController(
         @ModelAttribute query: AssetsOwnerQuery,
     ): Mono<AssetsResponse> {
         log.info(
-            "Received GET '/api/public/assets/sessionId' ownerId={}, status={}, type={}, hasSpot={}, page={}, size={}, sort={}",
+            "Received GET '/api/public/assets/session/{sessionId}' ownerId={}, status={}, type={}, hasSpot={}, page={}, size={}, sort={}",
             sessionId, query.status, query.type, query.hasSpot, query.page, query.size, query.sortDir
         )
         return assetsService.getAllAssetsBySessionId(sessionId, query)
