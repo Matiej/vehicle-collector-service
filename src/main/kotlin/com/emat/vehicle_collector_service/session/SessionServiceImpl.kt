@@ -47,7 +47,6 @@ class SessionServiceImpl(
             )
             .flatMap { toSessionResponse(it) }
 
-
     override fun listSessions(
         ownerId: String,
         page: Int,
