@@ -6,6 +6,7 @@ import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.LastModifiedDate
 import org.springframework.data.annotation.Version
+import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
 
@@ -13,11 +14,15 @@ import java.time.Instant
 data class SessionDocument(
     @Id
     val id: String? = null,
-    val sessionExternalId: String,
+    val sessionName: String? = null,
+    @Indexed(unique = true)
+    val sessionPublicId: String,
+    @Indexed
     val ownerId: String,
     val sessionMode: SessionMode,
     val spotId: String? = null,
     var status: SessionStatus = SessionStatus.CREATED,
+    val device: String?,
     @CreatedDate
     var createdAt: Instant? = null,
     @LastModifiedDate
