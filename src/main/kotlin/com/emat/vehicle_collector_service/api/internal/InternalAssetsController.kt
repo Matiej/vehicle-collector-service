@@ -3,10 +3,8 @@ package com.emat.vehicle_collector_service.api.internal
 import com.emat.vehicle_collector_service.api.internal.dto.AssetResponse
 import com.emat.vehicle_collector_service.api.internal.dto.AssetsOwnerQuery
 import com.emat.vehicle_collector_service.api.internal.dto.AssetsResponse
-import com.emat.vehicle_collector_service.assets.AssetMapper
 import com.emat.vehicle_collector_service.assets.AssetsService
 import com.emat.vehicle_collector_service.assets.domain.AssetRequest
-import com.emat.vehicle_collector_service.assets.domain.AssetStatus
 import com.emat.vehicle_collector_service.assets.domain.AssetType
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -28,14 +26,14 @@ class InternalAssetsController(
     private val log = LoggerFactory.getLogger(InternalAssetsController::class.java)
 
     @Operation(
-        summary = "Internal GET endpoint to return all assets",
-        description = "Fetches all available assets"
+        summary = "Internal GET: list assets",
+        description = "Lists assets with filtering and pagination (internal tooling)."
     )
     @ApiResponses(
-        value = [ApiResponse(
-            responseCode = "200",
-            description = "Assets successful retrieved",
-        ), ApiResponse(responseCode = "500", description = "Internal server error")]
+        value = [
+            ApiResponse(responseCode = "200", description = "Assets successfully retrieved"),
+            ApiResponse(responseCode = "500", description = "Internal server error")
+        ]
     )
     @GetMapping("/assets")
     fun allAssets(
@@ -49,50 +47,51 @@ class InternalAssetsController(
     }
 
     @Operation(
-        summary = "Internal GET endpoint to delete asset",
-        description = "Delete asset by assetID. Internal endpoint for web usage, no jwt needed"
+        summary = "Internal DELETE: delete asset",
+        description = "Deletes asset by assetPublicId (no JWT for internal tools, secure by network)."
     )
     @ApiResponses(
-        value = [ApiResponse(
-            responseCode = "202",
-            description = "Asset deleted",
-        ), ApiResponse(responseCode = "500", description = "Internal server error")]
+        value = [
+            ApiResponse(responseCode = "204", description = "Asset deleted"),
+            ApiResponse(responseCode = "404", description = "Asset not found"),
+            ApiResponse(responseCode = "500", description = "Internal server error")
+        ]
     )
-    @DeleteMapping("/assets/{assetId}")
+    @DeleteMapping("/assets/{assetPublicId}")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    fun deleteById(@PathVariable assetId: String): Mono<Void> {
-        log.info("Received DELETE request '/api/internal/assets/{assetId}' for assetId: {}", assetId)
-        return assetsService.deleteAsset(assetId)
+    fun deleteById(@PathVariable assetPublicId: String): Mono<Void> {
+        log.info("Received DELETE request '/api/internal/assets/{assetPublicId}' for assetPublicId: {}", assetPublicId)
+        return assetsService.deleteAssetByPublicId(assetPublicId)
     }
 
     @Operation(
-        summary = "Internal POST endpoint to create asset",
-        description = "Create asset for sessionId. Internal endpoint for web usage, no jwt needed"
+        summary = "Internal POST: upload asset to session",
+        description = "Creates an asset bound to sessionPublicId (multipart)"
     )
     @ApiResponses(
-        value = [ApiResponse(
-            responseCode = "202",
-            description = "Asset deleted",
-        ), ApiResponse(responseCode = "500", description = "Internal server error")]
+        ApiResponse(responseCode = "201", description = "Asset created"),
+        ApiResponse(responseCode = "400", description = "Bad request"),
+        ApiResponse(responseCode = "404", description = "Session not found"),
+        ApiResponse(responseCode = "500", description = "Internal server error")
     )
-    @PostMapping("/sessions/{sessionId}/assets", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @PostMapping("/sessions/{sessionPublicId}/assets", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @ResponseStatus(HttpStatus.CREATED)
     fun uploadAssetFromInternal(
-        @PathVariable(name = "sessionId") sessionId: String,
+        @PathVariable(name = "sessionPublicId") sessionPublicId: String,
         @RequestPart("file") filePart: FilePart,
         @RequestParam("ownerId") ownerId: String,
         @RequestParam("type") type: AssetType
     ): Mono<AssetResponse> {
         log.info(
-            "Received POST request '/api/internal/sessions/{sessionId}/assets' sessionsId: {}. ownerId: {}, type: {}, fileName: {}",
-            sessionId,
+            "Received POST request '/api/internal/sessions/{sessionPublicId}/assets' sessionPublicId: {}. ownerId: {}, type: {}, fileName: {}",
+            sessionPublicId,
             ownerId,
             type.name,
             filePart.filename()
         )
         return assetsService.saveAsset(
             AssetRequest(
-                sessionId = sessionId,
+                sessionPublicId = sessionPublicId,
                 filePart = filePart,
                 ownerId = ownerId,
                 assetType = type

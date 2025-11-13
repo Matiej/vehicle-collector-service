@@ -7,6 +7,7 @@ import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
 import com.emat.vehicle_collector_service.infrastructure.storage.StorageService
+import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
@@ -26,6 +27,9 @@ class AssetsServiceImpl(
     private val exifExtractor: ExifMetadataExtractor,
     private val storage: StorageService
 ) : AssetsService {
+
+    private val log = LoggerFactory.getLogger(AssetsService::class.java)
+
     override fun getAllAssets(assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
         val pageRequest = pageRequest(assetsOwnerQuery)
         var criteria = emptyList<Criteria>()
@@ -86,24 +90,27 @@ class AssetsServiceImpl(
             }
     }
 
-    override fun deleteAsset(assetId: String): Mono<Void> {
-        return assetRepository.findById(assetId)
+    override fun deleteAssetByPublicId(assetPublicId: String): Mono<Void> {
+        return assetRepository.findByAssetPublicId(assetPublicId)
             .switchIfEmpty(
                 Mono.error(
                     AssetUploadException(
-                        "Asset not found: $assetId",
+                        "Asset not found: $assetPublicId",
                         HttpStatus.NOT_FOUND,
                         "ASSET_NOT_FOUND"
                     )
                 )
             )
-            .flatMap { storage.delete(it.storageKeyPath) }
-            .then(assetRepository.deleteById(assetId))
+            .flatMap { asset ->
+                storage.delete(asset.storageKeyPath)
+                    .doOnSuccess { log.info("Deleted file ${asset.storageKeyPath}") }
+                    .then(assetRepository.deleteById(asset.id!!))
+            }.then()
     }
 
-    override fun getAllAssetsBySessionId(sessionId: String, assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
+    override fun getAllAssetsBySessionPublicId(sessionPublicId: String, assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
         val pageRequest = pageRequest(assetsOwnerQuery)
-        return assetRepository.findBySessionId(sessionId, pageRequest)
+        return assetRepository.findAllBySessionPublicId(sessionPublicId, pageRequest)
             .map { AssetMapper.toAssetResponse(it) }
             .collectList()
             .map { assets ->
@@ -125,16 +132,16 @@ class AssetsServiceImpl(
         return pageRequest
     }
 
-    override fun getAllAssetsBySessionId(sessionId: String): Flux<Asset> =
-        assetRepository.findBySessionId(sessionId)
+    override fun getAllAssetsBySessionPublicIdDescByCreatedAt(sessionPublicId: String): Flux<Asset> =
+        assetRepository.findAllBySessionPublicIdOrderByCreatedAtDesc(sessionPublicId)
             .map { AssetMapper.toDomain(it) }
 
-    override fun countAllBySessionId(sessionId: String): Mono<Long> {
-        return assetRepository.countAllBySessionId(sessionId)
+    override fun countAllBySessionPublicIdId(sessionPublicId: String): Mono<Long> {
+        return assetRepository.countAllBySessionPublicId(sessionPublicId)
     }
 
-    override fun findLastAssetThumbnail320BySessionId(sessionId: String): Mono<ThumbnailInfo> {
-        return assetRepository.findFirstBySessionIdOrderByCreatedAtDesc(sessionId)
+    override fun findLastAssetThumbnail320BySessionPublicIdId(sessionPublicId: String): Mono<ThumbnailInfo> {
+        return assetRepository.findFirstBySessionPublicIdOrderByCreatedAtDesc(sessionPublicId)
             .flatMap { asset ->
                 val thumb320 = asset.thumbnails
                     ?.firstOrNull { it.size == ThumbnailSize.THUMB_320 && it.storageKeyPath.isNotBlank() }
@@ -148,7 +155,7 @@ class AssetsServiceImpl(
         val mime = filePart.headers().contentType?.toString()?.lowercase()
         val filename = filePart.filename()
         val fileExtension = filename.substringAfterLast(".", "").lowercase()
-        val storageKeyPath = generateStorageKeyPath(assetRequest.assetType, fileExtension)
+        val storageKeyPath = generateStorageKeyPathAndPublicId(assetRequest.assetType, fileExtension)
         return validator.assetUploadValidate(filePart, assetRequest.assetType)
             .flatMap { validatedFile ->
                 val exifMono =
@@ -163,7 +170,7 @@ class AssetsServiceImpl(
                             id = null,
                             assetPublicId = storageKeyPath.second,
                             ownerId = assetRequest.ownerId,
-                            sessionId = assetRequest.sessionId,
+                            sessionPublicId = assetRequest.sessionPublicId,
                             spotId = null,
                             type = assetRequest.assetType,
                             status = AssetStatus.RAW,
@@ -184,7 +191,7 @@ class AssetsServiceImpl(
             }
     }
 
-    private fun generateStorageKeyPath(assetType: AssetType, extension: String): Pair<String, String> {
+    private fun generateStorageKeyPathAndPublicId(assetType: AssetType, extension: String): Pair<String, String> {
         val now = LocalDate.now()
         val publicId = generatePublicId("original")
         val storageKeyPath = assetType.name.lowercase() +
@@ -196,7 +203,7 @@ class AssetsServiceImpl(
     }
 
     private fun generatePublicId(type: String): String =
-        "asset_" + LocalDate.now().year + "_" + type + "_" +
+        "asset_" + LocalDate.now().year + "_" + LocalDate.now().month.value + "_" + type + "_" +
                 java.util.UUID.randomUUID().toString().take(8)
 
     private fun getNumberOfPages(totalCount: Int, pageSize: Int): Int {

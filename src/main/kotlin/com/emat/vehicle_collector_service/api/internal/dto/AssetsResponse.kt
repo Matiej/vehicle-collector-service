@@ -18,7 +18,7 @@ data class AssetResponse(
     val id: String?,
     val assetPublicId: String,
     val ownerId: String,
-    val sessionId: String?,
+    val sessionPublicId: String?,
     val spotId: String?,
     val assetType: AssetType,
     val assetStatus: AssetStatus,

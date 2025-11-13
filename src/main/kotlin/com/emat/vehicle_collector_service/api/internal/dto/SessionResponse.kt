@@ -5,11 +5,12 @@ import com.emat.vehicle_collector_service.session.domain.SessionStatus
 import com.emat.vehicle_collector_service.session.domain.SessionMode
 
 data class SessionResponse(
-    val sessionId: String,
+    val sessionPublicId: String,
+    val sessionName: String?,
     val mode: SessionMode,
     val ownerId: String,
     val spotId: String?,                  // only for spot in the future
-    val status: SessionStatus,
+    val sessionStatus: SessionStatus,
     val createdAt: String,
     val assets: List<SessionAsset>
 ) {
