@@ -4,7 +4,8 @@ import com.emat.vehicle_collector_service.session.domain.SessionMode
 import com.emat.vehicle_collector_service.session.domain.SessionStatus
 
 data class SessionSummaryResponse(
-    val sessionId: String,
+    val sessionPublicId: String,
+    val sessionName: String?,
     val sessionMode: SessionMode,
     val ownerId: String,
     val assetsCount: Int,

@@ -6,7 +6,7 @@ data class Asset(
     val id: String?,
     val assetPublicId: String,
     val ownerId: String,
-    val sessionId: String?,
+    val sessionPublicId: String?,
     val spotId: String?,
     val type: AssetType,
     val status: AssetStatus,

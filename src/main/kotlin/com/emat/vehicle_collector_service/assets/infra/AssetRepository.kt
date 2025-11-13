@@ -8,9 +8,9 @@ import reactor.core.publisher.Mono
 
 @Repository
 interface AssetRepository: ReactiveMongoRepository<AssetDocument, String> {
-    fun findBySessionId(sessionId: String, pageRequest: Pageable): Flux<AssetDocument>
-    fun findBySessionId(sessionId: String): Flux<AssetDocument>
-    fun countAllBySessionId(sessionId: String): Mono<Long>
-    fun findFirstBySessionIdOrderByCreatedAtDesc(sessionId: String): Mono<AssetDocument>
-    fun findAllByOwnerId(ownerId: String, pageRequest: Pageable): Flux<AssetDocument>
+    fun findAllBySessionPublicId(sessionPublicId: String, pageRequest: Pageable): Flux<AssetDocument>
+    fun findAllBySessionPublicIdOrderByCreatedAtDesc(sessionId: String):  Flux<AssetDocument>
+    fun countAllBySessionPublicId(sessionPublicId: String): Mono<Long>
+    fun findFirstBySessionPublicIdOrderByCreatedAtDesc(sessionPublicId: String): Mono<AssetDocument>
+    fun findByAssetPublicId(assetPublicId: String): Mono<AssetDocument>
 }

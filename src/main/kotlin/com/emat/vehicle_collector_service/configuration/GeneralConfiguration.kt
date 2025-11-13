@@ -1,5 +1,6 @@
 package com.emat.vehicle_collector_service.configuration
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.cors.CorsConfiguration
@@ -8,6 +9,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 
 
 @Configuration
+@EnableConfigurationProperties(CorsProperties::class)
 class GeneralConfiguration {
 
     @Bean
@@ -16,13 +18,13 @@ class GeneralConfiguration {
     }
 
     @Bean
-    fun corsWebFilter(): CorsWebFilter {
+    fun corsWebFilter(corsProperties: CorsProperties): CorsWebFilter {
         val config = CorsConfiguration()
         config.allowCredentials = true
-        config.allowedOrigins = listOf("http://localhost:5173")
-        config.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-        config.allowedHeaders = listOf("*")
-        config.exposedHeaders = listOf("Location", "Content-Disposition")
+        config.allowedOriginPatterns = corsProperties.allowedOriginPatterns
+        config.allowedMethods = corsProperties.allowedMethods
+        config.allowedHeaders = corsProperties.allowedHeaders
+        config.exposedHeaders = corsProperties.exposedHeaders
 
         val source: UrlBasedCorsConfigurationSource = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", config)

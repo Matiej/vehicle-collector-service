@@ -18,6 +18,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.LocalDate
 import java.util.*
+import kotlin.math.min
 
 @Service
 class SessionServiceImpl(
@@ -25,22 +26,27 @@ class SessionServiceImpl(
     private val assetService: AssetsService
 ) : SessionService {
 
-    override fun createSession(req: CreateSessionRequest): Mono<SessionResponse> {
+    private val SESSIONS_CONCURRENCY: Int =
+        min(Runtime.getRuntime().availableProcessors() * 2, 16)
+
+    override fun createSession(sessionRequest: CreateSessionRequest): Mono<SessionResponse> {
         val doc = SessionDocument(
-            sessionExternalId = genPublicId("sess"),
-            ownerId = req.ownerId,
-            sessionMode = req.mode
+            sessionPublicId = genPublicId("sess"),
+            sessionName = sessionRequest.sessionName,
+            ownerId = sessionRequest.ownerId,
+            sessionMode = sessionRequest.mode,
+            device = sessionRequest.device
         )
         return sessionRepository.save(doc)
             .flatMap { saved -> toSessionResponse(saved) }
     }
 
-    override fun getSession(sessionId: String): Mono<SessionResponse> =
-        sessionRepository.findById(sessionId)
+    override fun getSessionBySessionPublicId(sessionPublicId: String): Mono<SessionResponse> =
+        sessionRepository.findBySessionPublicId(sessionPublicId)
             .switchIfEmpty(
                 Mono.error(
                     AssetUploadException(
-                        "Can't find session: $sessionId for upload",
+                        "Can't find session: $sessionPublicId for upload",
                         HttpStatus.NOT_FOUND
                     )
                 )
@@ -64,7 +70,6 @@ class SessionServiceImpl(
             )
         )
 
-
     override fun listSessions(page: Int, size: Int, sort: Sort.Direction): Flux<SessionSummaryResponse> =
         findSessionsAssets(
             sessionRepository.findAllBy(
@@ -73,18 +78,18 @@ class SessionServiceImpl(
                     size,
                     Sort.by(sort, "createdAt")
                 )
-            )
+            ).sort()
         )
 
-    override fun changeSessionStatus(sessionId: String, sessionStatus: SessionStatus): Mono<SessionResponse> {
-        return sessionRepository.findById(sessionId)
+    override fun changeSessionStatus(sessionPublicId: String, sessionStatus: SessionStatus): Mono<SessionResponse> {
+        return sessionRepository.findBySessionPublicId(sessionPublicId)
             .map { doc ->
                 doc.status = sessionStatus
                 doc
             }.switchIfEmpty(
                 Mono.error(
                     AssetUploadException(
-                        "Can't find session: $sessionId for upload",
+                        "Can't find session: $sessionPublicId for upload",
                         HttpStatus.NOT_FOUND
                     )
                 )
@@ -93,17 +98,18 @@ class SessionServiceImpl(
     }
 
     private fun findSessionsAssets(sessionDocuments: Flux<SessionDocument>): Flux<SessionSummaryResponse> {
-        return sessionDocuments.flatMap { session ->
-            assetService.countAllBySessionId(sessionId = session.id!!)
+        return sessionDocuments.flatMapSequential({ session ->
+            assetService.countAllBySessionPublicIdId(session.sessionPublicId)
                 .defaultIfEmpty(0L)
-                .map { cnt -> session to cnt }
-        }.flatMap { (session, numberOfAssets) ->
-            assetService.findLastAssetThumbnail320BySessionId(session.id!!)
-                .map { it.storageKeyPath }
-                .defaultIfEmpty("")
-                .map { thumb320 ->
+                .zipWith(
+                    assetService.findLastAssetThumbnail320BySessionPublicIdId(session.sessionPublicId)
+                        .map { it.storageKeyPath }
+                        .defaultIfEmpty("")
+                )
+                { numberOfAssets, thumb320 ->
                     SessionSummaryResponse(
-                        sessionId = session.id,
+                        sessionPublicId = session.sessionPublicId,
+                        sessionName = session.sessionName,
                         sessionMode = session.sessionMode,
                         ownerId = session.ownerId,
                         assetsCount = numberOfAssets.toInt(),
@@ -112,11 +118,11 @@ class SessionServiceImpl(
                         createdAt = session.createdAt.toString()
                     )
                 }
-        }
+        }, SESSIONS_CONCURRENCY)
     }
 
     private fun toSessionResponse(sessionDocument: SessionDocument): Mono<SessionResponse> =
-        assetService.getAllAssetsBySessionId(sessionDocument.id!!)
+        assetService.getAllAssetsBySessionPublicIdDescByCreatedAt(sessionDocument.sessionPublicId)
             .map {
                 SessionAsset(
                     id = it.id!!,
@@ -128,11 +134,12 @@ class SessionServiceImpl(
             .collectList()
             .map { list ->
                 SessionResponse(
-                    sessionId = sessionDocument.id!!,
+                    sessionPublicId = sessionDocument.sessionPublicId,
+                    sessionName = sessionDocument.sessionName,
                     mode = sessionDocument.sessionMode,
                     ownerId = sessionDocument.ownerId,
                     spotId = sessionDocument.spotId,
-                    status = sessionDocument.status,
+                    sessionStatus = sessionDocument.status,
                     createdAt = sessionDocument.createdAt.toString(),
                     assets = list
                 )

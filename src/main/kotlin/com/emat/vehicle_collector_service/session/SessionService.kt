@@ -10,8 +10,8 @@ import reactor.core.publisher.Mono
 
 interface SessionService {
     fun createSession(req: CreateSessionRequest): Mono<SessionResponse>
-    fun getSession(sessionId: String): Mono<SessionResponse>
+    fun getSessionBySessionPublicId(sessionId: String): Mono<SessionResponse>
     fun listSessions(ownerId: String, page: Int, size: Int, sort: Sort.Direction): Flux<SessionSummaryResponse>
     fun listSessions(page: Int, size: Int, sort: Sort.Direction): Flux<SessionSummaryResponse>
-    fun changeSessionStatus(sessionId: String, sessionStatus: SessionStatus): Mono<SessionResponse>
+    fun changeSessionStatus(sessionPublicId: String, sessionStatus: SessionStatus): Mono<SessionResponse>
 }

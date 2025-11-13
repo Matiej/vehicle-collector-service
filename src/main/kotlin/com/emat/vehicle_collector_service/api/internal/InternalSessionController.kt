@@ -22,14 +22,14 @@ class InternalSessionController(
     private val log = LoggerFactory.getLogger(InternalSessionController::class.java)
 
     @Operation(
-        summary = "Internal GET endpoint to list all sessions for all owners",
-        description = "Fetches all available sessions, using pagination. Default values page=0, size=50"
+        summary = "Internal GET: list sessions",
+        description = "Lists sessions across all owners with pagination (default page=0, size=50)"
     )
     @ApiResponses(
-        value = [ApiResponse(
-            responseCode = "200",
-            description = "Sessions successful retrieved",
-        ), ApiResponse(responseCode = "500", description = "Internal server error")]
+        value = [
+            ApiResponse(responseCode = "200", description = "Sessions successfully  retrieved"),
+            ApiResponse(responseCode = "500", description = "Internal server error")
+        ]
     )
     @GetMapping("/sessions")
     fun listAll(
@@ -38,8 +38,8 @@ class InternalSessionController(
         @RequestParam(defaultValue = "DESC") sortDir: Sort.Direction
     ): Flux<SessionSummaryResponse> {
         log.info(
-            "Received GET request '/api/internal/sessions' for page: {}, size: {}.",
-            page, size
+            "Received GET request '/api/internal/sessions' for page: {}, size: {}, sort={}.",
+            page, size, sortDir
         )
         return sessionService.listSessions(page, size, sortDir)
     }
