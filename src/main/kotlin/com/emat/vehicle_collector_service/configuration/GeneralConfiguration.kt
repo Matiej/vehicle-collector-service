@@ -3,6 +3,7 @@ package com.emat.vehicle_collector_service.configuration
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.reactive.CorsWebFilter
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
@@ -18,6 +19,7 @@ class GeneralConfiguration {
     }
 
     @Bean
+    @Profile("local")
     fun corsWebFilter(corsProperties: CorsProperties): CorsWebFilter {
         val config = CorsConfiguration()
         config.allowCredentials = true

@@ -10,7 +10,7 @@ import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
 
-@Document
+@Document(value = SessionDocument.SESSION_COLLECTION_NAME)
 data class SessionDocument(
     @Id
     val id: String? = null,
@@ -29,6 +29,8 @@ data class SessionDocument(
     var updatedAt: Instant? = null,
     @Version
     var version: Long? = null
-
-
-)
+) {
+    companion object {
+        const val SESSION_COLLECTION_NAME: String = "sessions"
+    }
+}
