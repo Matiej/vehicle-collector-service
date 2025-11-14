@@ -12,7 +12,7 @@ import org.springframework.data.mongodb.core.index.Indexed
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
 
-@Document(collection = AssetDocument.assetDocumentName)
+@Document(collection = AssetDocument.ASSET_COLLECTION_NAME)
 data class AssetDocument(
     @Id
     val id: String?,
@@ -43,7 +43,7 @@ data class AssetDocument(
 ) {
 
     companion object {
-        const val assetDocumentName: String = "assets"
+        const val ASSET_COLLECTION_NAME: String = "assets"
     }
 }
 
