@@ -2,6 +2,7 @@ package com.emat.vehicle_collector_service.assets
 
 import com.emat.vehicle_collector_service.assets.domain.AssetType
 import com.emat.vehicle_collector_service.configuration.AppData
+import org.apache.commons.lang3.concurrent.UncheckedFuture.on
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.mockito.kotlin.doReturn
@@ -23,6 +24,7 @@ class AssetUploadValidationFilesTest {
 
     private var testPath: Path = Path.of(System.getProperty("user.dir")).resolve("tmp-test")
     private lateinit var tmpDir: Path
+    private lateinit var maxFileSize: String
     private lateinit var appData: AppData
     private lateinit var validator: AssetUploadValidator
 
@@ -31,11 +33,16 @@ class AssetUploadValidationFilesTest {
         tmpDir = Files.createDirectories(
             Path.of(System.getProperty("user.dir")).resolve("tmp-test").resolve("unit-files")
         )
+
+        maxFileSize = "20"
     }
 
     @BeforeEach
     fun setup() {
-        appData = mock<AppData> { on { getTmpDir() } doReturn tmpDir.toString() }
+        appData = mock<AppData> {
+            on { getTmpDir() } doReturn tmpDir.toString()
+            on { getMaxFileSize() } doReturn maxFileSize
+        }
         validator = AssetUploadValidator(appData)
     }
 
@@ -106,7 +113,7 @@ class AssetUploadValidationFilesTest {
 
     @Test
     fun `Too large file should throw`() {
-        val tooBigSize = 10 * 1024 * 1024 + 1   // = 10_485_761
+        val tooBigSize = 20 * 1024 * 1024 + 1   // = 10_485_761
         val bytes = ByteArray(tooBigSize) { 0 }
         bytes[0] = 0xFF.toByte()
         bytes[1] = 0xD8.toByte()
