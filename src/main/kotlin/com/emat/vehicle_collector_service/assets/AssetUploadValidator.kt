@@ -57,8 +57,9 @@ class AssetUploadValidator(
             filePart.transferTo(tmp.toPath())
                 .then(
                     Mono.fromCallable {
-                        if (tmp.length() > MAX_BYTES) {
-                            throw AssetUploadException("Max file size 10 MB", HttpStatus.PAYLOAD_TOO_LARGE)
+                        val maxBytes = appData.getMaxFileSize().toLong() * 1024 * 1024
+                        if (tmp.length() > maxBytes) {
+                            throw AssetUploadException("Max file size: ${appData.getMaxFileSize()} MB", HttpStatus.PAYLOAD_TOO_LARGE)
                         }
                         val header = FileInputStream(tmp).use { it.readNBytes(HEADER_MAX_SCAN_BYTES) }
                         val looksValid = when {
@@ -171,7 +172,6 @@ class AssetUploadValidator(
 
     companion object {
         private const val HEADER_MAX_SCAN_BYTES = 64
-        private const val MAX_BYTES: Long = 10L * 1024 * 1024 // 10 MB
 
         private val allowedExtensions = setOf("jpg", "jpeg", "png", "heic", "mp3", "m4a", "wav", "mp4")
         private val allowedMime = setOf(

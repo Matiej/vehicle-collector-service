@@ -9,6 +9,7 @@ class AppData {
         set(value) {
             field = value
         }
+
     @Value("\${app.version}")
     private lateinit var appVersion: String
 
@@ -17,6 +18,9 @@ class AppData {
 
     @Value("\${app.assets-dir}")
     private lateinit var assetsDir: String
+
+    @Value("\${app.max-file-size}")
+    private lateinit var maxFileSize: String
 
 
     private fun now(): LocalDateTime {
@@ -34,4 +38,9 @@ class AppData {
     fun getAssetsDir(): String {
         return assetsDir
     }
+
+    fun getMaxFileSize(): String {
+        return maxFileSize
+    }
+
 }
