@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: file:///G:/javaProjects/CONFIG/vehicle-collector-service/vehicle-collector-service-application.yml
   server:
     max-http-request-size: 25MB
   application:

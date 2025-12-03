@@ -40,6 +40,7 @@ class AssetUploadValidatorTest {
 
         appData = mock<AppData> {
             on { getTmpDir() } doReturn tmpDir.toString()
+            on { getMaxFileSize() } doReturn "20"
         }
         validator = AssetUploadValidator(appData)
     }
@@ -116,7 +117,7 @@ class AssetUploadValidatorTest {
 
     @Test
     fun `too big - reject`() {
-        val big = randomBytes((10 * 1024 * 1024) + 1) // 10MB + 1 bite
+        val big = randomBytes((20 * 1024 * 1024) + 1) // 10MB + 1 bite
         val fp = filePartMock("img.jpg", "image/jpeg", big)
         val ex = assertThrows(AssetUploadException::class.java) {
             validator.assetUploadValidate(fp, AssetType.IMAGE).getOrThrow()
