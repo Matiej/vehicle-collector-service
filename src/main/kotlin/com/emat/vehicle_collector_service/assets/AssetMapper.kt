@@ -1,7 +1,7 @@
 package com.emat.vehicle_collector_service.assets
 
-import com.emat.vehicle_collector_service.api.internal.dto.AssetLocation
-import com.emat.vehicle_collector_service.api.internal.dto.AssetResponse
+import com.emat.vehicle_collector_service.api.dto.AssetLocation
+import com.emat.vehicle_collector_service.api.dto.AssetResponse
 import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetMeta

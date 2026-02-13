@@ -1,8 +1,8 @@
 package com.emat.vehicle_collector_service.api
 
-import com.emat.vehicle_collector_service.api.internal.dto.CreateSessionRequest
-import com.emat.vehicle_collector_service.api.internal.dto.SessionResponse
-import com.emat.vehicle_collector_service.api.internal.dto.SessionSummaryResponse
+import com.emat.vehicle_collector_service.api.dto.CreateSessionRequest
+import com.emat.vehicle_collector_service.api.dto.SessionResponse
+import com.emat.vehicle_collector_service.api.dto.SessionSummaryResponse
 import com.emat.vehicle_collector_service.session.SessionService
 import com.emat.vehicle_collector_service.session.domain.SessionStatus
 import io.swagger.v3.oas.annotations.Operation

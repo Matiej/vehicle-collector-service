@@ -1,8 +1,8 @@
 package com.emat.vehicle_collector_service.session
 
-import com.emat.vehicle_collector_service.api.internal.dto.CreateSessionRequest
-import com.emat.vehicle_collector_service.api.internal.dto.SessionResponse
-import com.emat.vehicle_collector_service.api.internal.dto.SessionSummaryResponse
+import com.emat.vehicle_collector_service.api.dto.CreateSessionRequest
+import com.emat.vehicle_collector_service.api.dto.SessionResponse
+import com.emat.vehicle_collector_service.api.dto.SessionSummaryResponse
 import com.emat.vehicle_collector_service.assets.AssetUploadException
 import com.emat.vehicle_collector_service.assets.AssetsService
 import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize

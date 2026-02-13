@@ -1,4 +1,4 @@
-package com.emat.vehicle_collector_service.api.internal.dto
+package com.emat.vehicle_collector_service.api.dto
 
 import com.emat.vehicle_collector_service.assets.domain.AssetStatus
 import com.emat.vehicle_collector_service.assets.domain.AssetType

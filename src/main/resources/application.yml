@@ -21,3 +21,13 @@ app:
   name: @project.name@
   tmp-assets-dir: "./assets_tmp"
   assets-dir: "./assets"
+
+keycloak:
+  admin:
+    baseUrl: http://localhost:8085
+    realm: "vehicle"
+    client-id: "someId"
+    client-secret: "key"
+    regular-user-role-id: "roleId"
+    regular-user-role-name: "REGULAR_USER"
+    frontend-client-id: "profiler-fe"
