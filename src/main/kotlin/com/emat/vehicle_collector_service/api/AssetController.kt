@@ -1,8 +1,8 @@
 package com.emat.vehicle_collector_service.api
 
-import com.emat.vehicle_collector_service.api.internal.dto.AssetResponse
-import com.emat.vehicle_collector_service.api.internal.dto.AssetsOwnerQuery
-import com.emat.vehicle_collector_service.api.internal.dto.AssetsResponse
+import com.emat.vehicle_collector_service.api.dto.AssetResponse
+import com.emat.vehicle_collector_service.api.dto.AssetsOwnerQuery
+import com.emat.vehicle_collector_service.api.dto.AssetsResponse
 import com.emat.vehicle_collector_service.assets.AssetsService
 import com.emat.vehicle_collector_service.assets.domain.AssetRequest
 import com.emat.vehicle_collector_service.assets.domain.AssetType

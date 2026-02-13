@@ -8,7 +8,6 @@ data class KeycloakAdminProperties(
     val realm: String,
     val clientId: String,
     val clientSecret: String,
-    val regularUserRoleId: String,
-    val regularUserRoleName: String,
-    val frontendClientId: String
+    val frontendClientId: String,
+    val roles: Map<String, String>
 )

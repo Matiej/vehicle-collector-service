@@ -1,6 +1,6 @@
 package com.emat.vehicle_collector_service.api.internal
 
-import com.emat.vehicle_collector_service.api.internal.dto.SessionSummaryResponse
+import com.emat.vehicle_collector_service.api.dto.SessionSummaryResponse
 import com.emat.vehicle_collector_service.session.SessionService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse

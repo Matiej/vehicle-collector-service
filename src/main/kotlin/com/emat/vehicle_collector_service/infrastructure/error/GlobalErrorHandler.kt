@@ -1,6 +1,7 @@
 package com.emat.vehicle_collector_service.infrastructure.error
 
 import com.emat.vehicle_collector_service.assets.AssetUploadException
+import com.emat.vehicle_collector_service.infrastructure.keycloak.KeycloakException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -83,5 +84,25 @@ class GlobalErrorHandler {
             message = "Unexpected server error"
         )
         return ResponseEntity.status(status).body(api)
+    }
+
+    @ExceptionHandler(KeycloakException::class)
+    fun handleKeycloakException(ex:KeycloakException, exchange: ServerWebExchange): ResponseEntity<ApiError> {
+        val api =
+            ApiError(
+                path = exchange.request.path.value(),
+                status = ex.status.value(),
+                error = ex.status.reasonPhrase,
+                code = ex.code.name,
+                message = ex.message
+            )
+        log.info(
+            "Keycloak error: {} {} -> {} {}",
+            exchange.request.method,
+            exchange.request.path.value(),
+            ex.status,
+            ex.message
+        )
+        return ResponseEntity.status(ex.status).body(api)
     }
 }

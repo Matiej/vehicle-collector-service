@@ -10,7 +10,7 @@ import org.springframework.web.reactive.function.client.WebClient
 class KeycloakAdminConfig {
 
     @Bean
-    fun keycloakAdminWebClient(properties: KeycloakAdminProperties) =
+    fun keycloakAdminWebClient(properties: KeycloakAdminProperties): WebClient =
         WebClient.builder()
             .baseUrl(properties.baseUrl + "/admin/realms/" + properties.realm)
             .build()
