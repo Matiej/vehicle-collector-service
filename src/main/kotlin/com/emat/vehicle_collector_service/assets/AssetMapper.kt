@@ -75,7 +75,7 @@ object AssetMapper {
             }
         )
 
-    fun toResponse(asset: Asset): AssetResponse =
+    fun assetToResponse(asset: Asset): AssetResponse =
         AssetResponse(
             id = asset.id,
             assetPublicId = asset.assetPublicId,
