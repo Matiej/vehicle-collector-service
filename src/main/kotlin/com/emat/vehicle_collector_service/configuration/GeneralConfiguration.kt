@@ -19,7 +19,7 @@ class GeneralConfiguration {
     }
 
     @Bean
-    @Profile("local")
+    @Profile("local", "local-wsl")
     fun corsWebFilter(corsProperties: CorsProperties): CorsWebFilter {
         val config = CorsConfiguration()
         config.allowCredentials = true
