@@ -1,6 +1,5 @@
 package com.emat.vehicle_collector_service.infrastructure.storage
 
-import com.emat.vehicle_collector_service.api.internal.InternalAssetsController
 import com.emat.vehicle_collector_service.assets.AssetUploadException
 import com.emat.vehicle_collector_service.configuration.AppData
 import org.slf4j.LoggerFactory

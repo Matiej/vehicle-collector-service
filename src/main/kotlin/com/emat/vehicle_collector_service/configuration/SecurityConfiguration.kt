@@ -11,12 +11,12 @@ import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter
 import org.springframework.security.web.server.SecurityWebFilterChain
-import java.util.stream.Collectors
 
 @Configuration
 @EnableWebFluxSecurity
-//@EnableReactiveMethodSecurity
-class SecurityConfiguration {
+class SecurityConfiguration(
+    private val appData: AppData
+) {
 
     @Value("\${app.security.swagger-public:false}")
     private val swaggerPublic = false
@@ -53,7 +53,7 @@ class SecurityConfiguration {
 
     private fun configureSwagger(spec: ServerHttpSecurity.AuthorizeExchangeSpec): ServerHttpSecurity.AuthorizeExchangeSpec {
         val swaggerPaths = arrayOf("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/docs/**")
-        return if (swaggerPublic) {
+        return if (appData.isSwaggerPublic()) {
             spec.pathMatchers(*swaggerPaths).permitAll()
         } else {
             spec.pathMatchers(*swaggerPaths).hasRole("TECH_ADMIN")
