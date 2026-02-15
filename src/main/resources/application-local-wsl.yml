@@ -1,0 +1,33 @@
+spring:
+  config:
+    import: file:/home/matiej/projects/CONFIG/vehicle-collector-service-application.yml
+  data:
+    mongodb:
+      host: localhost
+      port: 27019
+      database: vehicle-collector-service_mongo_db
+      username: ${MONGO_USER}
+      password: ${MONGO_PWD}
+      authentication-database: admin
+      auto-index-creation: true
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+app:
+  tmp-assets-dir: "./assets_tmp"
+  assets-dir: "./assets"
+  security:
+    swagger-public: true
+    swagger-url: http://localhost:8080
+
+security:
+  cors:
+    allowed-origin-patterns:
+      - "http://localhost:*"
+    allowed-methods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"]
+    allowed-headers: ["*"]
+    exposed-headers: ["Location","Content-Disposition"]
