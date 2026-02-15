@@ -14,6 +14,10 @@ spring:
       org.springframework.web.reactive.function.client: WARN
 
 springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
   swagger-ui.path: /docs
 
 app:
@@ -21,6 +25,9 @@ app:
   name: @project.name@
   tmp-assets-dir: "./assets_tmp"
   assets-dir: "./assets"
+  security:
+    swagger-public: false
+    swagger-url: https://api.lan
 
 keycloak:
   admin:

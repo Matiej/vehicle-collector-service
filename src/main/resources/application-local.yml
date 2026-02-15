@@ -11,9 +11,18 @@ spring:
       authentication-database: admin
       auto-index-creation: true
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
 app:
   tmp-assets-dir: "./assets_tmp"
   assets-dir: "./assets"
+  security:
+    swagger-public: true
+    swagger-url: http://localhost:8080
 
 security:
   cors:

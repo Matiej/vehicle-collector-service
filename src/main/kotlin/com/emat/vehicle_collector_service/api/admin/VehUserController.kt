@@ -28,7 +28,7 @@ class VehUserController(
             description = "Regular users successful retrieved",
         ), ApiResponse(responseCode = "500", description = "Internal server error")]
     )
-    @GetMapping("/regular/users")
+    @GetMapping("/users/regular")
     fun listAllRegularUsers(): Flux<VehUserResponse> {
         log.info("Received GET request '/api/admin/regular/users' ")
         return vehUserService.listAllRegularUsers()
@@ -45,7 +45,7 @@ class VehUserController(
             description = "Regular user successful created",
         ), ApiResponse(responseCode = "500", description = "Internal server error")]
     )
-    @PostMapping("/regular/users")
+    @PostMapping("/users/regular")
     @ResponseStatus(HttpStatus.CREATED)
     fun createRegularUser(@Valid @RequestBody createUserDto: CreateUserDto): Mono<String> {
         log.info("Received POST request '/api/admin/regular/users' creating new regular user")
@@ -62,7 +62,7 @@ class VehUserController(
             description = "Regular user successful updated",
         ), ApiResponse(responseCode = "500", description = "Internal server error")]
     )
-    @PutMapping("/regular/users")
+    @PutMapping("/users/regular")
     @ResponseStatus(HttpStatus.CREATED)
     fun updateRegularUser(@Valid @RequestBody updateDto: UpdateUserDto): Mono<VehUserResponse> {
         log.info("Received PUT request '/api/admin/regular/users' updating regular user")
@@ -81,7 +81,7 @@ class VehUserController(
             ApiResponse(responseCode = "500", description = "Internal server error")
         ]
     )
-    @GetMapping("/regular/users/{userId}")
+    @GetMapping("/users/regular/{userId}")
     fun getUserById(@PathVariable userId: String): Mono<VehUserResponse> {
         log.info("Received GET request '/api/admin/regular/users/$userId'")
         return vehUserService.getUserById(userId)
@@ -98,7 +98,7 @@ class VehUserController(
             ApiResponse(responseCode = "500", description = "Internal server error")
         ]
     )
-    @DeleteMapping("/regular/users/{userId}")
+    @DeleteMapping("/users/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun deleteUser(@PathVariable userId: String): Mono<Void> {
         log.info("Received DELETE request '/api/admin/regular/users/$userId'")
@@ -115,7 +115,7 @@ class VehUserController(
             ApiResponse(responseCode = "500", description = "Internal server error")
         ]
     )
-    @PatchMapping("/regular/users/{userId}/status")
+    @PatchMapping("/users/{userId}/status")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun changeUserStatus(
         @PathVariable userId: String,
@@ -135,7 +135,7 @@ class VehUserController(
             ApiResponse(responseCode = "500", description = "Internal server error")
         ]
     )
-    @PostMapping("/regular/users/{userId}/actions-email")
+    @PostMapping("/users/{userId}/actions-email")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun sendUserActionsEmail(
         @PathVariable userId: String,
@@ -144,5 +144,4 @@ class VehUserController(
         log.info("Received POST request '/api/admin/regular/users/$userId/actions-email' actions=$actions")
         return vehUserService.sendUserActionsEmail(userId, actions)
     }
-
 }
