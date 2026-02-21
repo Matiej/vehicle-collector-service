@@ -31,6 +31,7 @@
 		<kotlin.version>1.9.25</kotlin.version>
 		<springdoc-openapi>2.8.15</springdoc-openapi>
 		<metadata-extractor>2.19.0</metadata-extractor>
+		<thumbnailator>0.4.20</thumbnailator>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -74,6 +75,11 @@
 			<groupId>com.drewnoakes</groupId>
 			<artifactId>metadata-extractor</artifactId>
 			<version>${metadata-extractor}</version>
+		</dependency>
+		<dependency>
+			<groupId>net.coobird</groupId>
+			<artifactId>thumbnailator</artifactId>
+			<version>${thumbnailator}</version>
 		</dependency>
 
 		<dependency>

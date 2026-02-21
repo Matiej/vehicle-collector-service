@@ -84,7 +84,12 @@ object AssetMapper {
             spotId = asset.spotId,
             assetType = asset.type,
             assetStatus = asset.status,
-            thumbUrl = asset.thumbnails.firstOrNull()?.storageKeyPath ?: "",
+            thumbnailSmallUrl = asset.thumbnails
+                .firstOrNull { it.size == ThumbnailSize.THUMB_320 }
+                ?.let { "/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320" },
+            thumbnailMediumUrl = asset.thumbnails
+                .firstOrNull { it.size == ThumbnailSize.THUMB_640 }
+                ?.let { "/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_640" },
             geoLocation = AssetLocation(
                 locationSource = asset.locationSource,
                 lat = (asset.exif?.lat ?: asset.deviceGeoLocation?.lat)?.toString() ?: "",
@@ -102,7 +107,12 @@ object AssetMapper {
             spotId = assetDocument.spotId,
             assetType = assetDocument.assetType,
             assetStatus = assetDocument.assetStatus,
-            thumbUrl = assetDocument.thumbnails.firstOrNull()?.storageKeyPath ?: "",
+            thumbnailSmallUrl = assetDocument.thumbnails
+                .firstOrNull { it.size == ThumbnailSize.THUMB_320 }
+                ?.let { "/api/public/assets/${assetDocument.assetPublicId}/thumbnail?size=THUMB_320" },
+            thumbnailMediumUrl = assetDocument.thumbnails
+                .firstOrNull { it.size == ThumbnailSize.THUMB_640 }
+                ?.let { "/api/public/assets/${assetDocument.assetPublicId}/thumbnail?size=THUMB_640" },
             geoLocation = AssetLocation(
                 locationSource = assetDocument.locationSource,
                 lat = (assetDocument.exif?.lat ?: assetDocument.deviceGeoLocation?.lat)?.toString() ?: "",

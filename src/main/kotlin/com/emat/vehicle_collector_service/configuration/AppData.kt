@@ -18,6 +18,11 @@ class AppData {
     private lateinit var assetsDir: String
     @Value("\${app.max-file-size}")
     private lateinit var maxFileSize: String
+    @Value("\${app.thumbnails.quality:0.80}")
+    private var thumbnailsQuality: Double = 0.80
+    @Value("\${app.thumbnails.format:jpg}")
+    private lateinit var thumbnailsFormat: String
+
     @Value("\${app.security.swagger-public:false}")
     private var swaggerPublic: Boolean = false
     @Value("\${app.security.swagger-token:}")
@@ -44,6 +49,10 @@ class AppData {
     fun getMaxFileSize(): String {
         return maxFileSize
     }
+
+    fun getThumbnailsQuality(): Double = thumbnailsQuality
+    fun getThumbnailsFormat(): String = thumbnailsFormat
+    fun getThumbnailsDir(): String = "$assetsDir/thumbnails"
 
     fun isSwaggerPublic(): Boolean = swaggerPublic
     fun getSwaggerTokenUrl(): String = swaggerTokenUrl

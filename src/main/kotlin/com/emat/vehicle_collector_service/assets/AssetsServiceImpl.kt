@@ -6,6 +6,7 @@ import com.emat.vehicle_collector_service.api.dto.AssetsResponse
 import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
+import com.emat.vehicle_collector_service.assets.thumbnail.ThumbnailService
 import com.emat.vehicle_collector_service.infrastructure.storage.StorageService
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
@@ -25,10 +26,20 @@ class AssetsServiceImpl(
     private val template: ReactiveMongoTemplate,
     private val validator: AssetUploadValidator,
     private val exifExtractor: ExifMetadataExtractor,
-    private val storage: StorageService
+    private val storage: StorageService,
+    private val thumbnailService: ThumbnailService
 ) : AssetsService {
 
     private val log = LoggerFactory.getLogger(AssetsService::class.java)
+
+    override fun findByPublicId(assetPublicId: String): Mono<AssetDocument> {
+        return assetRepository.findByAssetPublicId(assetPublicId)
+            .switchIfEmpty(
+                Mono.error(
+                    AssetUploadException("Asset not found: $assetPublicId", HttpStatus.NOT_FOUND, "ASSET_NOT_FOUND")
+                )
+            )
+    }
 
     override fun getAllAssets(assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
         val pageRequest = pageRequest(assetsOwnerQuery)
@@ -185,6 +196,18 @@ class AssetsServiceImpl(
                             updatedAt = null
                         )
                         assetRepository.save(AssetMapper.toDocument(asset))
+                    }
+                    .doOnNext { savedDoc ->
+                        if (savedDoc.assetType == AssetType.IMAGE) {
+                            thumbnailService.generateAndSave(
+                                assetId = savedDoc.id!!,
+                                assetPublicId = savedDoc.assetPublicId,
+                                originalStorageKeyPath = savedDoc.storageKeyPath
+                            ).subscribe(
+                                {},
+                                { e -> log.error("Thumbnail background job failed: {}", e.message) }
+                            )
+                        }
                     }
                     .map(AssetMapper::toAssetResponse)
                     .doFinally { _ -> validatedFile.tmpFile.delete() }

@@ -6,22 +6,30 @@ import com.emat.vehicle_collector_service.api.dto.AssetsResponse
 import com.emat.vehicle_collector_service.assets.AssetsService
 import com.emat.vehicle_collector_service.assets.domain.AssetRequest
 import com.emat.vehicle_collector_service.assets.domain.AssetType
+import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
+import com.emat.vehicle_collector_service.configuration.AppData
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import org.slf4j.LoggerFactory
+import org.springframework.core.io.FileSystemResource
+import org.springframework.core.io.Resource
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.http.codec.multipart.FilePart
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Mono
+import java.nio.file.Path
 
 @RestController
 @RequestMapping("/api/public")
 @Validated
 class AssetController(
-    private val assetsService: AssetsService
+    private val assetsService: AssetsService,
+    private val appData: AppData
 ) {
     private val log = LoggerFactory.getLogger(AssetController::class.java)
 
@@ -102,5 +110,37 @@ class AssetController(
             sessionPublicId, query.status, query.type, query.hasSpot, query.page, query.size, query.sortDir
         )
         return assetsService.getAllAssetsBySessionPublicId(sessionPublicId, query)
+    }
+
+    @Operation(
+        summary = "Public GET: serve asset thumbnail",
+        description = "Returns a thumbnail image (JPG) for the given asset and size."
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Thumbnail served"),
+        ApiResponse(responseCode = "404", description = "Thumbnail not ready or asset not found")
+    )
+    @GetMapping("/assets/{assetPublicId}/thumbnail")
+    fun getThumbnail(
+        @PathVariable assetPublicId: String,
+        @RequestParam(defaultValue = "THUMB_320") size: ThumbnailSize
+    ): Mono<ResponseEntity<Resource>> {
+        return assetsService.findByPublicId(assetPublicId)
+            .map { asset ->
+                val thumb = asset.thumbnails.firstOrNull { it.size == size }
+                    ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Thumbnail not ready yet")
+
+                val resource: Resource = FileSystemResource(
+                    Path.of(appData.getAssetsDir()).resolve(thumb.storageKeyPath)
+                )
+                if (!resource.exists()) {
+                    throw ResponseStatusException(HttpStatus.NOT_FOUND, "Thumbnail file missing")
+                }
+
+                ResponseEntity.ok()
+                    .header("Cache-Control", "public, max-age=31536000, immutable")
+                    .contentType(MediaType.IMAGE_JPEG)
+                    .body(resource)
+            }
     }
 }
