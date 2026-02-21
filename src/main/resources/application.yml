@@ -25,6 +25,9 @@ app:
   name: @project.name@
   tmp-assets-dir: "./assets_tmp"
   assets-dir: "./assets"
+  thumbnails:
+    quality: 0.80
+    format: jpg
   security:
     swagger-public: false
     swagger-url: https://api.lan

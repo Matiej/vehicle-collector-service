@@ -22,7 +22,8 @@ data class AssetResponse(
     val spotId: String?,
     val assetType: AssetType,
     val assetStatus: AssetStatus,
-    val thumbUrl: String,
+    val thumbnailSmallUrl: String?,
+    val thumbnailMediumUrl: String?,
     val geoLocation: AssetLocation,
     val createdAt: Instant
 )

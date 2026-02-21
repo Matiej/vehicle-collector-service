@@ -27,12 +27,6 @@ logging:
     com.emat.vehicle_collector_service.client: DEBUG
     org.springframework.web.reactive.function.client: TRACE
 
-springdoc:
-  api-docs:
-    enabled: false
-  swagger-ui:
-    enabled: false
-
 app:
   tmp-assets-dir: /app/tmp_assets
   assets-dir: /app/assets
