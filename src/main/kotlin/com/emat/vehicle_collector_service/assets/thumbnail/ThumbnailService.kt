@@ -21,6 +21,7 @@ class ThumbnailService(
     private val appData: AppData
 ) {
     private val log = LoggerFactory.getLogger(ThumbnailService::class.java)
+    private val thumbnailScheduler = Schedulers.newBoundedElastic(2, 100, "thumbnail")
 
     fun generateAndSave(assetId: String, assetPublicId: String, originalStorageKeyPath: String): Mono<Void> {
         return Mono.fromCallable {
@@ -35,7 +36,7 @@ class ThumbnailService(
                 Thumbnail(size = size, storageKeyPath = relativePath)
             }
         }
-            .subscribeOn(Schedulers.boundedElastic())
+            .subscribeOn(thumbnailScheduler)
             .flatMap { thumbnails -> updateAssetThumbnails(assetId, thumbnails) }
             .doOnSuccess { log.info("Thumbnails READY for asset={}", assetPublicId) }
             .doOnError { e -> log.error("Thumbnail FAILED for asset={}: {}", assetPublicId, e.message, e) }

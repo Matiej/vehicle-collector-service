@@ -4,7 +4,8 @@ data class SessionAsset(
     val id: String,
     val type: String,                     // image | audio
     val status: String,                   // RAW, VECTORIZED, TRANSCRIBED, ERROR
-    val thumbnailUrl: String?
+    val thumbnailSmallUrl: String?,
+    val thumbnailMediumUrl: String?
 ) {
 
 }

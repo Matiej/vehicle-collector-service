@@ -123,12 +123,15 @@ class SessionServiceImpl(
 
     private fun toSessionResponse(sessionDocument: SessionDocument): Mono<SessionResponse> =
         assetService.getAllAssetsBySessionPublicIdDescByCreatedAt(sessionDocument.sessionPublicId)
-            .map {
+            .map { asset ->
                 SessionAsset(
-                    id = it.id!!,
-                    type = it.type.name,
-                    status = it.status.name,
-                    thumbnailUrl = it.thumbnails.find { it.size == ThumbnailSize.THUMB_320 }?.storageKeyPath
+                    id = asset.id!!,
+                    type = asset.type.name,
+                    status = asset.status.name,
+                    thumbnailSmallUrl = asset.thumbnails.firstOrNull { it.size == ThumbnailSize.THUMB_320 }
+                        ?.let { "/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320" },
+                    thumbnailMediumUrl = asset.thumbnails.firstOrNull { it.size == ThumbnailSize.THUMB_640 }
+                        ?.let { "/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_640" }
                 )
             }
             .collectList()
