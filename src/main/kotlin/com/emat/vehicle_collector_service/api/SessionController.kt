@@ -12,6 +12,8 @@ import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Flux
@@ -38,11 +40,12 @@ class SessionController(
     )
     @GetMapping
     fun listAllByOwner(
-        @RequestParam ownerId: String,
+        @AuthenticationPrincipal jwt: Jwt,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "50") size: Int,
         @RequestParam(defaultValue = "DESC") sortDir: Sort.Direction
     ): Flux<SessionSummaryResponse> {
+        val ownerId = jwt.subject
         log.info(
             "Received GET request '/api/public/sessions/' for page: {}, size: {} and owner {}",
             page, size, ownerId
@@ -63,13 +66,15 @@ class SessionController(
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createSession(
+        @AuthenticationPrincipal jwt: Jwt,
         @RequestBody @Valid createSessionRequest: CreateSessionRequest
     ): Mono<SessionResponse> {
+        val ownerId = jwt.subject
         log.info(
             "Received POST request '/api/public/sessions' to create session of the owner {}, mode: {}, device: {}",
-            createSessionRequest.ownerId, createSessionRequest.mode, createSessionRequest.device
+            ownerId, createSessionRequest.mode, createSessionRequest.device
         )
-        return sessionService.createSession(createSessionRequest)
+        return sessionService.createSession(createSessionRequest, ownerId)
     }
 
     @Operation(
@@ -85,6 +90,7 @@ class SessionController(
     @PutMapping("/{sessionPublicId}")
     @ResponseStatus(HttpStatus.CREATED)
     fun closeSession(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable() sessionPublicId: String,
         @RequestParam(required = true) sessionStatus: SessionStatus
     ): Mono<SessionResponse> {
@@ -92,7 +98,7 @@ class SessionController(
             "Received PUT request '/api/public/sessions/{sessionPublicId}' to change session status session to {}, for sessionPublicId {}",
             sessionStatus.name, sessionPublicId
         )
-        return sessionService.changeSessionStatus(sessionPublicId, sessionStatus)
+        return sessionService.changeSessionStatus(sessionPublicId, jwt.subject, sessionStatus)
     }
 
     @Operation(
@@ -106,8 +112,11 @@ class SessionController(
         ), ApiResponse(responseCode = "500", description = "Internal server error")]
     )
     @GetMapping("/{sessionPublicId}")
-    fun get(@PathVariable sessionPublicId: String): Mono<SessionResponse> {
+    fun get(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable sessionPublicId: String
+    ): Mono<SessionResponse> {
         log.info("Received GET request '/api/public/sessions/{sessionPublicId}' for sessionPublicId={}", sessionPublicId)
-        return sessionService.getSessionBySessionPublicId(sessionPublicId)
+        return sessionService.getSessionBySessionPublicId(sessionPublicId, jwt.subject)
     }
 }

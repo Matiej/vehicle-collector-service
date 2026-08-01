@@ -3,16 +3,15 @@ package com.emat.vehicle_collector_service.session
 import com.emat.vehicle_collector_service.api.dto.CreateSessionRequest
 import com.emat.vehicle_collector_service.api.dto.SessionResponse
 import com.emat.vehicle_collector_service.api.dto.SessionSummaryResponse
-import com.emat.vehicle_collector_service.assets.AssetUploadException
 import com.emat.vehicle_collector_service.assets.AssetsService
 import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
+import com.emat.vehicle_collector_service.infrastructure.error.ResourceNotFoundException
 import com.emat.vehicle_collector_service.session.domain.SessionAsset
 import com.emat.vehicle_collector_service.session.domain.SessionStatus
 import com.emat.vehicle_collector_service.session.infra.SessionDocument
 import com.emat.vehicle_collector_service.session.infra.SessionRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
@@ -29,11 +28,11 @@ class SessionServiceImpl(
     private val SESSIONS_CONCURRENCY: Int =
         min(Runtime.getRuntime().availableProcessors() * 2, 16)
 
-    override fun createSession(sessionRequest: CreateSessionRequest): Mono<SessionResponse> {
+    override fun createSession(sessionRequest: CreateSessionRequest, ownerId: String): Mono<SessionResponse> {
         val doc = SessionDocument(
             sessionPublicId = genPublicId("sess"),
             sessionName = sessionRequest.sessionName,
-            ownerId = sessionRequest.ownerId,
+            ownerId = ownerId,
             sessionMode = sessionRequest.mode,
             device = sessionRequest.device
         )
@@ -41,16 +40,8 @@ class SessionServiceImpl(
             .flatMap { saved -> toSessionResponse(saved) }
     }
 
-    override fun getSessionBySessionPublicId(sessionPublicId: String): Mono<SessionResponse> =
-        sessionRepository.findBySessionPublicId(sessionPublicId)
-            .switchIfEmpty(
-                Mono.error(
-                    AssetUploadException(
-                        "Can't find session: $sessionPublicId for upload",
-                        HttpStatus.NOT_FOUND
-                    )
-                )
-            )
+    override fun getSessionBySessionPublicId(sessionPublicId: String, ownerId: String): Mono<SessionResponse> =
+        findOwnedSession(sessionPublicId, ownerId)
             .flatMap { toSessionResponse(it) }
 
     override fun listSessions(
@@ -81,21 +72,27 @@ class SessionServiceImpl(
             ).sort()
         )
 
-    override fun changeSessionStatus(sessionPublicId: String, sessionStatus: SessionStatus): Mono<SessionResponse> {
-        return sessionRepository.findBySessionPublicId(sessionPublicId)
+    override fun changeSessionStatus(
+        sessionPublicId: String,
+        ownerId: String,
+        sessionStatus: SessionStatus
+    ): Mono<SessionResponse> {
+        return findOwnedSession(sessionPublicId, ownerId)
             .map { doc ->
                 doc.status = sessionStatus
                 doc
-            }.switchIfEmpty(
-                Mono.error(
-                    AssetUploadException(
-                        "Can't find session: $sessionPublicId for upload",
-                        HttpStatus.NOT_FOUND
-                    )
-                )
-            ).flatMap { sessionRepository.save(it) }
+            }
+            .flatMap { sessionRepository.save(it) }
             .flatMap { toSessionResponse(it) }
     }
+
+    private fun findOwnedSession(sessionPublicId: String, ownerId: String): Mono<SessionDocument> =
+        sessionRepository.findBySessionPublicIdAndOwnerId(sessionPublicId, ownerId)
+            .switchIfEmpty(
+                Mono.error(
+                    ResourceNotFoundException("Session $sessionPublicId not found for owner $ownerId")
+                )
+            )
 
     private fun findSessionsAssets(sessionDocuments: Flux<SessionDocument>): Flux<SessionSummaryResponse> {
         return sessionDocuments.flatMapSequential({ session ->

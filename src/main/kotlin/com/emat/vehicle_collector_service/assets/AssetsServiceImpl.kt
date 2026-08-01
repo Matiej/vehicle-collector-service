@@ -7,7 +7,9 @@ import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
 import com.emat.vehicle_collector_service.assets.thumbnail.ThumbnailService
+import com.emat.vehicle_collector_service.infrastructure.error.ResourceNotFoundException
 import com.emat.vehicle_collector_service.infrastructure.storage.StorageService
+import com.emat.vehicle_collector_service.session.SessionOwnership
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -27,16 +29,17 @@ class AssetsServiceImpl(
     private val validator: AssetUploadValidator,
     private val exifExtractor: ExifMetadataExtractor,
     private val storage: StorageService,
-    private val thumbnailService: ThumbnailService
+    private val thumbnailService: ThumbnailService,
+    private val sessionOwnership: SessionOwnership
 ) : AssetsService {
 
     private val log = LoggerFactory.getLogger(AssetsService::class.java)
 
-    override fun findByPublicId(assetPublicId: String): Mono<AssetDocument> {
-        return assetRepository.findByAssetPublicId(assetPublicId)
+    override fun findByPublicId(assetPublicId: String, ownerId: String): Mono<AssetDocument> {
+        return assetRepository.findByAssetPublicIdAndOwnerId(assetPublicId, ownerId)
             .switchIfEmpty(
                 Mono.error(
-                    AssetUploadException("Asset not found: $assetPublicId", HttpStatus.NOT_FOUND, "ASSET_NOT_FOUND")
+                    ResourceNotFoundException("Asset $assetPublicId not found for owner $ownerId")
                 )
             )
     }
@@ -119,9 +122,13 @@ class AssetsServiceImpl(
             }.then()
     }
 
-    override fun getAllAssetsBySessionPublicId(sessionPublicId: String, assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
+    override fun getAllAssetsBySessionPublicId(
+        sessionPublicId: String,
+        ownerId: String,
+        assetsOwnerQuery: AssetsOwnerQuery
+    ): Mono<AssetsResponse> {
         val pageRequest = pageRequest(assetsOwnerQuery)
-        return assetRepository.findAllBySessionPublicId(sessionPublicId, pageRequest)
+        return assetRepository.findAllBySessionPublicIdAndOwnerId(sessionPublicId, ownerId, pageRequest)
             .map { AssetMapper.toAssetResponse(it) }
             .collectList()
             .map { assets ->
@@ -161,7 +168,11 @@ class AssetsServiceImpl(
             .map { ThumbnailInfo(size = it.size, storageKeyPath = it.storageKeyPath) }
     }
 
-    override fun saveAsset(assetRequest: AssetRequest): Mono<AssetResponse> {
+    override fun saveAsset(assetRequest: AssetRequest): Mono<AssetResponse> =
+        sessionOwnership.requireOwned(assetRequest.sessionPublicId, assetRequest.ownerId)
+            .then(Mono.defer { storeAsset(assetRequest) })
+
+    private fun storeAsset(assetRequest: AssetRequest): Mono<AssetResponse> {
         val filePart = assetRequest.filePart
         val mime = filePart.headers().contentType?.toString()?.lowercase()
         val filename = filePart.filename()
