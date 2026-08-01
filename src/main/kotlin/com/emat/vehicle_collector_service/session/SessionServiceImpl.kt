@@ -96,10 +96,10 @@ class SessionServiceImpl(
 
     private fun findSessionsAssets(sessionDocuments: Flux<SessionDocument>): Flux<SessionSummaryResponse> {
         return sessionDocuments.flatMapSequential({ session ->
-            assetService.countAllBySessionPublicIdId(session.sessionPublicId)
+            assetService.countAllBySessionPublicId(session.sessionPublicId)
                 .defaultIfEmpty(0L)
                 .zipWith(
-                    assetService.findLastAssetThumbnail320BySessionPublicIdId(session.sessionPublicId)
+                    assetService.findLastAssetThumbnail320BySessionPublicId(session.sessionPublicId)
                         .map { it.storageKeyPath }
                         .defaultIfEmpty("")
                 )

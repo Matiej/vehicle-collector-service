@@ -154,11 +154,11 @@ class AssetsServiceImpl(
         assetRepository.findAllBySessionPublicIdOrderByCreatedAtDesc(sessionPublicId)
             .map { AssetMapper.toDomain(it) }
 
-    override fun countAllBySessionPublicIdId(sessionPublicId: String): Mono<Long> {
+    override fun countAllBySessionPublicId(sessionPublicId: String): Mono<Long> {
         return assetRepository.countAllBySessionPublicId(sessionPublicId)
     }
 
-    override fun findLastAssetThumbnail320BySessionPublicIdId(sessionPublicId: String): Mono<ThumbnailInfo> {
+    override fun findLastAssetThumbnail320BySessionPublicId(sessionPublicId: String): Mono<ThumbnailInfo> {
         return assetRepository.findFirstBySessionPublicIdOrderByCreatedAtDesc(sessionPublicId)
             .flatMap { asset ->
                 val thumb320 = asset.thumbnails
