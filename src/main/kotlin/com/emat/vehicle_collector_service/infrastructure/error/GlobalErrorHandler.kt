@@ -37,6 +37,25 @@ class GlobalErrorHandler {
         return ResponseEntity.status(ex.status).body(api)
     }
 
+    @ExceptionHandler(ResourceNotFoundException::class)
+    fun handleResourceNotFound(ex: ResourceNotFoundException, exchange: ServerWebExchange): ResponseEntity<ApiError> {
+        val status = HttpStatus.NOT_FOUND
+        val api = ApiError(
+            path = exchange.request.path.value(),
+            status = status.value(),
+            error = status.reasonPhrase,
+            code = "NOT_FOUND",
+            message = "Resource not found"
+        )
+        log.info(
+            "Resource not found: {} {} -> {}",
+            exchange.request.method,
+            exchange.request.path.value(),
+            ex.message
+        )
+        return ResponseEntity.status(status).body(api)
+    }
+
     @ExceptionHandler(WebExchangeBindException::class, BindException::class)
     fun handleValidation(ex: Exception, exchange: ServerWebExchange): ResponseEntity<ApiError> {
         val status = HttpStatus.BAD_REQUEST

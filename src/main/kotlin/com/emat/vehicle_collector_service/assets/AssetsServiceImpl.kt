@@ -169,9 +169,9 @@ class AssetsServiceImpl(
         val storageKeyPath = generateStorageKeyPathAndPublicId(assetRequest.assetType, fileExtension)
         return validator.assetUploadValidate(filePart, assetRequest.assetType)
             .flatMap { validatedFile ->
-                val exifMono =
+                val exifMono: Mono<ExifInfo?> =
                     exifExtractor.extract(validatedFile.tmpFile, mime).defaultIfEmpty(ExifInfo(null, null, null, null))
-                val storeMono = storage.store(validatedFile.tmpFile, storageKeyPath.first)
+                val storeMono: Mono<String> = storage.store(validatedFile.tmpFile, storageKeyPath.first)
 
                 exifMono.zipWith(storeMono)
                     .flatMap { tuple ->
