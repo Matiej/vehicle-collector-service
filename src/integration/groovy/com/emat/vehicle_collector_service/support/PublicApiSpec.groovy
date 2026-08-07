@@ -1,4 +1,4 @@
-package support
+package com.emat.vehicle_collector_service.support
 
 import com.emat.vehicle_collector_service.VehicleCollectorServiceApplication
 import com.emat.vehicle_collector_service.assets.domain.AssetStatus

@@ -1,9 +1,9 @@
-package api
+package com.emat.vehicle_collector_service.api
 
 import com.emat.vehicle_collector_service.session.domain.SessionStatus
 import com.emat.vehicle_collector_service.session.infra.SessionDocument
 import org.springframework.http.MediaType
-import support.PublicApiSpec
+import com.emat.vehicle_collector_service.support.PublicApiSpec
 
 class SessionControllerIT extends PublicApiSpec {
 

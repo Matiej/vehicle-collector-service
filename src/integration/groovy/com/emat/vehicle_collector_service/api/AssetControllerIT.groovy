@@ -1,4 +1,4 @@
-package api
+package com.emat.vehicle_collector_service.api
 
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.session.infra.SessionDocument
@@ -6,7 +6,7 @@ import org.springframework.core.io.ClassPathResource
 import org.springframework.http.MediaType
 import org.springframework.http.client.MultipartBodyBuilder
 import org.springframework.util.MultiValueMap
-import support.PublicApiSpec
+import com.emat.vehicle_collector_service.support.PublicApiSpec
 
 class AssetControllerIT extends PublicApiSpec {
 

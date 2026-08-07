@@ -189,7 +189,7 @@
 						</goals>
 						<configuration>
 							<sources>
-								<source>${integration.source.dir}</source>
+								<source>${integration.source.dir}/groovy</source>
 							</sources>
 						</configuration>
 					</execution>
@@ -223,7 +223,7 @@
 						<configuration>
 							<testSources>
 								<testSource>
-									<directory>${integration.source.dir}</directory>
+									<directory>${integration.source.dir}/groovy</directory>
 									<includes>
 										<include>**/*.groovy</include>
 									</includes>
