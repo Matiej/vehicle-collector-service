@@ -2,37 +2,43 @@ package com.emat.vehicle_collector_service.assets
 
 import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.Metadata
+import com.drew.metadata.exif.ExifDirectoryBase
 import com.drew.metadata.exif.ExifIFD0Directory
 import com.drew.metadata.exif.ExifSubIFDDirectory
 import com.drew.metadata.exif.GpsDirectory
 import com.drew.metadata.mov.QuickTimeDirectory
 import com.drew.metadata.mov.metadata.QuickTimeMetadataDirectory
 import com.drew.metadata.mp4.Mp4Directory
-import com.emat.vehicle_collector_service.assets.domain.ExifInfo
+import com.emat.vehicle_collector_service.assets.domain.GeoPoint
+import com.emat.vehicle_collector_service.assets.infra.CameraInfo
+import com.emat.vehicle_collector_service.assets.infra.CaptureInfo
 
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import java.io.File
 import java.io.FileInputStream
+import java.time.Instant
 import java.util.*
 
 
 @Component
 class ExifMetadataExtractor {
 
-    fun extract(file: File, mimeType: String?): Mono<ExifInfo?> =
-        Mono.fromCallable {
-            mimeType?.let {
-                when {
-                    mimeType.startsWith("image/") -> extractFromImage(file, mimeType)
-                    mimeType.startsWith("video/") -> extractFromMovOrMp4(file, mimeType)
-                    else -> null
-                }
-            }
-        }.subscribeOn(Schedulers.boundedElastic())
+    fun extract(file: File, mimeType: String?): Mono<CaptureInfo> =
+        Mono.defer { Mono.justOrEmpty(extractBlocking(file, mimeType)) }
+            .subscribeOn(Schedulers.boundedElastic())
 
-    private fun extractFromImage(file: File, mimeType: String): ExifInfo? {
+    private fun extractBlocking(file: File, mimeType: String?): CaptureInfo? =
+        mimeType?.let {
+            when {
+                mimeType.startsWith("image/") -> extractFromImage(file)
+                mimeType.startsWith("video/") -> extractFromMovOrMp4(file, mimeType)
+                else -> null
+            }
+        }
+
+    private fun extractFromImage(file: File): CaptureInfo? {
         try {
             FileInputStream(file).use { ins ->
                 val metadata: Metadata = ImageMetadataReader.readMetadata(ins)
@@ -40,18 +46,19 @@ class ExifMetadataExtractor {
                 val ifd0: ExifIFD0Directory? = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
                 val gps: GpsDirectory? = metadata.getFirstDirectoryOfType(GpsDirectory::class.java)
 
-                val date = subIfd?.dateOriginal
-                val takenAt = date?.toInstant()
+                val takenAt = subIfd?.dateOriginal?.toInstant()
                 val geo = gps?.geoLocation
-                val lat = geo?.latitude
-                val lng = geo?.longitude
-                val make = ifd0?.getString(ExifIFD0Directory.TAG_MAKE)
-                val model = ifd0?.getString(ExifIFD0Directory.TAG_MODEL)
-                val camera = listOfNotNull(make, model).joinToString(" ").ifBlank { null }
+                val camera = cameraInfo(
+                    make = ifd0?.getString(ExifDirectoryBase.TAG_MAKE),
+                    model = ifd0?.getString(ExifDirectoryBase.TAG_MODEL),
+                    lens = subIfd?.getString(ExifDirectoryBase.TAG_LENS_MODEL),
+                    iso = subIfd?.getInteger(ExifDirectoryBase.TAG_ISO_EQUIVALENT),
+                    exposure = subIfd?.getDescription(ExifDirectoryBase.TAG_EXPOSURE_TIME),
+                    fNumber = subIfd?.getDoubleObject(ExifDirectoryBase.TAG_FNUMBER),
+                    focalLength = subIfd?.getDoubleObject(ExifDirectoryBase.TAG_FOCAL_LENGTH)
+                )
 
-                return if (takenAt != null || lat != null) {
-                    ExifInfo(takenAt, lat, lng, camera)
-                } else null
+                return captureInfo(takenAt, geo?.latitude, geo?.longitude, camera)
             }
         } catch (_: Exception) {
             return null
@@ -59,7 +66,7 @@ class ExifMetadataExtractor {
 
     }
 
-    private fun extractFromMovOrMp4(file: File, mimeType: String): ExifInfo? {
+    private fun extractFromMovOrMp4(file: File, mimeType: String): CaptureInfo? {
         val filename = file.name.lowercase(Locale.ROOT)
         val isMov = mimeType.contains("quicktime") || filename.endsWith(".mov")
         val isMp4 = mimeType.contains("mp4") || filename.endsWith(".mp4")
@@ -74,7 +81,7 @@ class ExifMetadataExtractor {
         }
     }
 
-    private fun parseQuickTime(meta: Metadata): ExifInfo? {
+    private fun parseQuickTime(meta: Metadata): CaptureInfo? {
         val quickTimeDir = meta.getFirstDirectoryOfType(QuickTimeDirectory::class.java)
         val metaDir = meta.getFirstDirectoryOfType(QuickTimeMetadataDirectory::class.java)
 
@@ -85,24 +92,19 @@ class ExifMetadataExtractor {
         val iso = metaDir?.getString(QuickTimeMetadataDirectory.TAG_LOCATION_ISO6709)
         val (lat, lng) = parseIso6709(iso)
 
-        val make = metaDir?.getString(QuickTimeMetadataDirectory.TAG_MAKE)
-        val model = metaDir?.getString(QuickTimeMetadataDirectory.TAG_MODEL)
-        val camera = listOfNotNull(make, model).joinToString(" ").ifBlank { null }
-
-        return if (takenAt != null || lat != null || lng != null || camera != null)
-            ExifInfo(takenAt, lat, lng, camera)
-        else null
+        return captureInfo(takenAt, lat, lng, quickTimeCamera(metaDir))
     }
 
-    private fun parseMp4(meta: Metadata): ExifInfo? {
+    private fun parseMp4(meta: Metadata): CaptureInfo? {
         val mp4 = meta.getFirstDirectoryOfType(Mp4Directory::class.java)
         val takenAt = mp4?.getDate(Mp4Directory.TAG_CREATION_TIME)?.toInstant()
         var latFromMp4: Double? = mp4?.getDouble(Mp4Directory.TAG_LATITUDE)
         var lngFromMp4: Double? = mp4?.getDouble(Mp4Directory.TAG_LONGITUDE)
 
+        val qtMeta = meta.getFirstDirectoryOfType(QuickTimeMetadataDirectory::class.java)
+
         if (latFromMp4 == null && lngFromMp4 == null) {
-            val iso = meta.getFirstDirectoryOfType(QuickTimeMetadataDirectory::class.java)
-                ?.getString(QuickTimeMetadataDirectory.TAG_LOCATION_ISO6709)
+            val iso = qtMeta?.getString(QuickTimeMetadataDirectory.TAG_LOCATION_ISO6709)
             val (isoLat, isoLng) = parseIso6709(iso)
             if (isoLat != null || isoLng != null) {
                 latFromMp4 = isoLat
@@ -110,15 +112,50 @@ class ExifMetadataExtractor {
             }
         }
 
-        val qtMeta = meta.getFirstDirectoryOfType(QuickTimeMetadataDirectory::class.java)
-        val make = qtMeta?.getString(QuickTimeMetadataDirectory.TAG_MAKE)
-        val model = qtMeta?.getString(QuickTimeMetadataDirectory.TAG_MODEL)
-        val camera = listOfNotNull(make, model).joinToString(" ").ifBlank { null }
+        return captureInfo(takenAt, latFromMp4, lngFromMp4, quickTimeCamera(qtMeta))
+    }
 
-        return if (takenAt != null || latFromMp4 != null || lngFromMp4 != null) {
-            ExifInfo(takenAt, latFromMp4, lngFromMp4, camera)
-        } else null
+    private fun quickTimeCamera(metaDir: QuickTimeMetadataDirectory?): CameraInfo? =
+        cameraInfo(
+            make = metaDir?.getString(QuickTimeMetadataDirectory.TAG_MAKE),
+            model = metaDir?.getString(QuickTimeMetadataDirectory.TAG_MODEL),
+            lens = null,
+            iso = null,
+            exposure = null,
+            fNumber = null,
+            focalLength = null
+        )
 
+    private fun cameraInfo(
+        make: String?,
+        model: String?,
+        lens: String?,
+        iso: Int?,
+        exposure: String?,
+        fNumber: Double?,
+        focalLength: Double?
+    ): CameraInfo? {
+        val camera = CameraInfo(
+            make = make?.trim()?.ifBlank { null },
+            model = model?.trim()?.ifBlank { null },
+            lens = lens?.trim()?.ifBlank { null },
+            iso = iso,
+            exposure = exposure?.trim()?.ifBlank { null },
+            fNumber = fNumber,
+            focalLength = focalLength
+        )
+        return if (camera == CameraInfo()) null else camera
+    }
+
+    private fun captureInfo(
+        takenAt: Instant?,
+        lat: Double?,
+        lng: Double?,
+        camera: CameraInfo?
+    ): CaptureInfo? {
+        val exifGps = if (lat != null && lng != null) GeoPoint(lat, lng) else null
+        return if (takenAt == null && exifGps == null && camera == null) null
+        else CaptureInfo(takenAt = takenAt, exifGps = exifGps, camera = camera)
     }
 
     private fun parseIso6709(value: String?): Pair<Double?, Double?> {

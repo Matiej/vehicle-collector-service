@@ -9,7 +9,6 @@ data class SessionResponse(
     val sessionName: String?,
     val mode: SessionMode,
     val ownerId: String,
-    val spotId: String?,                  // only for spot in the future
     val sessionStatus: SessionStatus,
     val createdAt: String,
     val assets: List<SessionAsset>

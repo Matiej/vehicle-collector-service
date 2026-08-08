@@ -1,123 +1,68 @@
 package com.emat.vehicle_collector_service.assets
 
-import com.emat.vehicle_collector_service.api.dto.AssetLocation
+import com.emat.vehicle_collector_service.api.dto.AssetCaptureResponse
+import com.emat.vehicle_collector_service.api.dto.AssetFileResponse
 import com.emat.vehicle_collector_service.api.dto.AssetResponse
+import com.emat.vehicle_collector_service.api.dto.GeoPointResponse
+import com.emat.vehicle_collector_service.api.dto.PlaceResponse
 import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
-import com.emat.vehicle_collector_service.assets.infra.AssetMeta
-import com.emat.vehicle_collector_service.assets.infra.DeviceLocation
-import com.emat.vehicle_collector_service.assets.infra.Thumbnail
+import com.emat.vehicle_collector_service.assets.infra.CaptureInfo
 import java.time.Instant
 
 object AssetMapper {
 
-    fun toDomain(assetDocument: AssetDocument): Asset {
-        return Asset( //todo moze w bazie dla nullable nie trzeba bedzie = null
+    fun toDomain(assetDocument: AssetDocument): Asset =
+        Asset(
             id = assetDocument.id ?: "",
             assetPublicId = assetDocument.assetPublicId,
             ownerId = assetDocument.ownerId,
             sessionPublicId = assetDocument.sessionPublicId,
-            spotId = assetDocument.spotId,
             type = assetDocument.assetType,
-            status = assetDocument.assetStatus,
-            mimeType = assetDocument.mimeType,
-            originalFilename = assetDocument.originalFilename,
-            storageKeyPath = assetDocument.storageKeyPath,
-            locationSource = assetDocument.locationSource,
-            exif = assetDocument.exif?.let {
-                ExifInfo(
-                    takenAt = it.takenAt,
-                    lat = it.lat,
-                    lng = it.lng,
-                    camera = it.camera
-                )
-            },
-            deviceGeoLocation = assetDocument.deviceGeoLocation?.let {
-                GeoPoint(it.lat, it.lng)
-            },
-            thumbnails = assetDocument.thumbnails.map {
-                ThumbnailInfo(
-                    size = it.size ?: ThumbnailSize.THUMB_320,
-                    storageKeyPath = it.storageKeyPath ?: ""
-                )
+            status = assetDocument.file.status,
+            thumbnails = assetDocument.file.thumbnails.map {
+                ThumbnailInfo(size = it.size, storageKeyPath = it.storageKeyPath)
             },
             createdAt = assetDocument.createdAt,
             updatedAt = assetDocument.updatedAt
         )
-    }
-
-    fun toDocument(asset: Asset): AssetDocument =
-        AssetDocument(
-            id = asset.id,
-            assetPublicId = asset.assetPublicId,
-            ownerId = asset.ownerId,
-            sessionPublicId = asset.sessionPublicId,
-            spotId = asset.spotId,
-            assetType = asset.type,
-            mimeType = asset.mimeType,
-            originalFilename = asset.originalFilename,
-            storageKeyPath = asset.storageKeyPath,
-            locationSource = asset.locationSource,
-            exif = asset.exif?.let {
-                AssetMeta(
-                    takenAt = it.takenAt,
-                    lat = it.lat,
-                    lng = it.lng,
-                    camera = it.camera
-                )
-            },
-            deviceGeoLocation = asset.deviceGeoLocation?.let {
-                DeviceLocation(lat = it.lat, lng = it.lng)
-            },
-            assetStatus = asset.status,
-            thumbnails = asset.thumbnails.map {
-                Thumbnail(size = it.size, storageKeyPath = it.storageKeyPath)
-            }
-        )
-
-    fun assetToResponse(asset: Asset): AssetResponse =
-        AssetResponse(
-            id = asset.id,
-            assetPublicId = asset.assetPublicId,
-            ownerId = asset.ownerId,
-            sessionPublicId = asset.sessionPublicId,
-            spotId = asset.spotId,
-            assetType = asset.type,
-            assetStatus = asset.status,
-            thumbnailSmallUrl = asset.thumbnails
-                .firstOrNull { it.size == ThumbnailSize.THUMB_320 }
-                ?.let { "/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320" },
-            thumbnailMediumUrl = asset.thumbnails
-                .firstOrNull { it.size == ThumbnailSize.THUMB_640 }
-                ?.let { "/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_640" },
-            geoLocation = AssetLocation(
-                locationSource = asset.locationSource,
-                lat = (asset.exif?.lat ?: asset.deviceGeoLocation?.lat)?.toString() ?: "",
-                lng = (asset.exif?.lng ?: asset.deviceGeoLocation?.lng)?.toString() ?: ""
-            ),
-            createdAt = asset.createdAt ?: asset.updatedAt ?: Instant.now()
-        )
 
     fun toAssetResponse(assetDocument: AssetDocument): AssetResponse =
         AssetResponse(
-            id = assetDocument.id,
             assetPublicId = assetDocument.assetPublicId,
             ownerId = assetDocument.ownerId,
             sessionPublicId = assetDocument.sessionPublicId,
-            spotId = assetDocument.spotId,
             assetType = assetDocument.assetType,
-            assetStatus = assetDocument.assetStatus,
-            thumbnailSmallUrl = assetDocument.thumbnails
+            file = AssetFileResponse(
+                originalFilename = assetDocument.file.originalFilename,
+                mimeType = assetDocument.file.mimeType,
+                sizeBytes = assetDocument.file.sizeBytes,
+                width = assetDocument.file.width,
+                height = assetDocument.file.height,
+                sha256 = assetDocument.file.sha256
+            ),
+            capture = AssetCaptureResponse(
+                takenAt = assetDocument.capture.takenAt,
+                gps = activeGps(assetDocument.capture)?.let { GeoPointResponse(it.lat, it.lng) },
+                gpsSource = assetDocument.capture.gpsSource,
+                place = assetDocument.capture.place?.let {
+                    PlaceResponse(
+                        countryCode = it.countryCode,
+                        country = it.country,
+                        city = it.city,
+                        region = it.region
+                    )
+                }
+            ),
+            thumbnailSmallUrl = assetDocument.file.thumbnails
                 .firstOrNull { it.size == ThumbnailSize.THUMB_320 }
                 ?.let { "/api/public/assets/${assetDocument.assetPublicId}/thumbnail?size=THUMB_320" },
-            thumbnailMediumUrl = assetDocument.thumbnails
+            thumbnailMediumUrl = assetDocument.file.thumbnails
                 .firstOrNull { it.size == ThumbnailSize.THUMB_640 }
                 ?.let { "/api/public/assets/${assetDocument.assetPublicId}/thumbnail?size=THUMB_640" },
-            geoLocation = AssetLocation(
-                locationSource = assetDocument.locationSource,
-                lat = (assetDocument.exif?.lat ?: assetDocument.deviceGeoLocation?.lat)?.toString() ?: "",
-                lng = (assetDocument.exif?.lng ?: assetDocument.deviceGeoLocation?.lng)?.toString() ?: ""
-            ),
             createdAt = assetDocument.createdAt ?: assetDocument.updatedAt ?: Instant.now()
         )
+
+    private fun activeGps(capture: CaptureInfo): GeoPoint? =
+        if (capture.gpsSource == GpsSource.USER) capture.userGps else capture.exifGps
 }

@@ -44,7 +44,7 @@ class ThumbnailService(
     }
 
     private fun updateAssetThumbnails(assetId: String, thumbnails: List<Thumbnail>): Mono<com.mongodb.client.result.UpdateResult> {
-        val update = Update().set("thumbnails", thumbnails)
+        val update = Update().set("file.thumbnails", thumbnails)
         return reactiveMongoTemplate.updateFirst(
             Query.query(Criteria.where("_id").`is`(assetId)),
             update,

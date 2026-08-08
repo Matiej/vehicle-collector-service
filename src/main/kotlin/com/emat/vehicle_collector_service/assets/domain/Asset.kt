@@ -7,30 +7,16 @@ data class Asset(
     val assetPublicId: String,
     val ownerId: String,
     val sessionPublicId: String?,
-    val spotId: String?,
     val type: AssetType,
     val status: AssetStatus,
-    val mimeType: String?,
-    val originalFilename: String?,
-    val storageKeyPath: String,
-    val locationSource: LocationSource,
-    val exif: ExifInfo?,
-    val deviceGeoLocation: GeoPoint?,
     val thumbnails: List<ThumbnailInfo>,
     val createdAt: Instant?,
     val updatedAt: Instant?
 )
 
-data class ExifInfo(
-    val takenAt: Instant?,
-    val lat: Double?,
-    val lng: Double?,
-    val camera: String?
-)
-
 data class GeoPoint(
-    val lat: Double?,
-    val lng: Double?
+    val lat: Double,
+    val lng: Double
 )
 
 data class ThumbnailInfo(

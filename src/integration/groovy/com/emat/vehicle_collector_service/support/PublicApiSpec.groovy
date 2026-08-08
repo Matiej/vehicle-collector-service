@@ -3,11 +3,14 @@ package com.emat.vehicle_collector_service.support
 import com.emat.vehicle_collector_service.VehicleCollectorServiceApplication
 import com.emat.vehicle_collector_service.assets.domain.AssetStatus
 import com.emat.vehicle_collector_service.assets.domain.AssetType
-import com.emat.vehicle_collector_service.assets.domain.LocationSource
 import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
+import com.emat.vehicle_collector_service.assets.infra.CaptureInfo
+import com.emat.vehicle_collector_service.assets.infra.CurationInfo
+import com.emat.vehicle_collector_service.assets.infra.FileInfo
 import com.emat.vehicle_collector_service.assets.infra.Thumbnail
+import com.emat.vehicle_collector_service.assets.infra.VehicleRecognition
 import com.emat.vehicle_collector_service.configuration.AppData
 import com.emat.vehicle_collector_service.session.domain.SessionMode
 import com.emat.vehicle_collector_service.session.domain.SessionStatus
@@ -83,7 +86,6 @@ abstract public class PublicApiSpec extends Specification {
                         "sess_it_${shortId()}",
                         ownerId,
                         SessionMode.BULK,
-                        null,
                         status,
                         "integration-test",
                         null,
@@ -93,23 +95,34 @@ abstract public class PublicApiSpec extends Specification {
         ).block()
     }
 
-    protected AssetDocument givenAsset(String ownerId, String sessionPublicId, List<Thumbnail> thumbnails = []) {
+    protected AssetDocument givenAsset(
+            String ownerId,
+            String sessionPublicId,
+            List<Thumbnail> thumbnails = [],
+            CaptureInfo capture = new CaptureInfo()
+    ) {
         assetRepository.save(
                 new AssetDocument(
                         null,
                         "asset_it_${shortId()}",
                         ownerId,
                         sessionPublicId,
-                        null,
                         AssetType.IMAGE,
-                        "image/jpeg",
-                        "sample.jpg",
-                        "image/2026/8/${shortId()}.jpg",
-                        LocationSource.UNKNOWN,
-                        null,
-                        null,
-                        AssetStatus.RAW,
-                        thumbnails,
+                        new FileInfo(
+                                "image/2026/8/${shortId()}.jpg",
+                                "sample.jpg",
+                                "image/jpeg",
+                                null,
+                                null,
+                                null,
+                                null,
+                                AssetStatus.RAW,
+                                null,
+                                thumbnails
+                        ),
+                        capture,
+                        new CurationInfo(),
+                        new VehicleRecognition(),
                         null,
                         null,
                         null

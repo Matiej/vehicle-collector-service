@@ -6,7 +6,6 @@ import org.springframework.data.domain.Sort
 
 data class AssetsOwnerQuery(
     val status: AssetStatus? = null,
-    val hasSpot: Boolean? = null,
     val type: AssetType? = null,
     val page: Int = 0,
     val size: Int = 50,

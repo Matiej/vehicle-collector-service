@@ -87,8 +87,8 @@ class AssetController(
     ): Mono<AssetsResponse> {
         val ownerId = jwt.subject
         log.info(
-            "Received GET '/api/public/assets' ownerId={}, status={}, type={}, hasSpot={}, page={}, size={}, sort={}",
-            ownerId, query.status, query.type, query.hasSpot, query.page, query.size, query.sortDir
+            "Received GET '/api/public/assets' ownerId={}, status={}, type={}, page={}, size={}, sort={}",
+            ownerId, query.status, query.type, query.page, query.size, query.sortDir
         )
         return assetsService.getAllAssetsByOwnerId(ownerId, query)
 
@@ -111,8 +111,8 @@ class AssetController(
         @ModelAttribute query: AssetsOwnerQuery,
     ): Mono<AssetsResponse> {
         log.info(
-            "Received GET '/api/public/assets/session/{sessionId}' sessionPublicId={}, status={}, type={}, hasSpot={}, page={}, size={}, sort={}",
-            sessionPublicId, query.status, query.type, query.hasSpot, query.page, query.size, query.sortDir
+            "Received GET '/api/public/assets/session/{sessionId}' sessionPublicId={}, status={}, type={}, page={}, size={}, sort={}",
+            sessionPublicId, query.status, query.type, query.page, query.size, query.sortDir
         )
         return assetsService.getAllAssetsBySessionPublicId(sessionPublicId, jwt.subject, query)
     }
@@ -133,7 +133,7 @@ class AssetController(
     ): Mono<ResponseEntity<Resource>> {
         return assetsService.findByPublicId(assetPublicId, jwt.subject)
             .map { asset ->
-                val thumb = asset.thumbnails.firstOrNull { it.size == size }
+                val thumb = asset.file.thumbnails.firstOrNull { it.size == size }
                     ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Thumbnail not ready yet")
 
                 val resource: Resource = FileSystemResource(

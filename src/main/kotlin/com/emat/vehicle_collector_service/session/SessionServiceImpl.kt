@@ -138,7 +138,6 @@ class SessionServiceImpl(
                     sessionName = sessionDocument.sessionName,
                     mode = sessionDocument.sessionMode,
                     ownerId = sessionDocument.ownerId,
-                    spotId = sessionDocument.spotId,
                     sessionStatus = sessionDocument.status,
                     createdAt = sessionDocument.createdAt.toString(),
                     assets = list
