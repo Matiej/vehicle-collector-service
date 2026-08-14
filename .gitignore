@@ -36,3 +36,8 @@ build/
 /logs/*
 /assets/
 /assets_tmp/
+
+### utils helper ###
+claude
+.claude
+info

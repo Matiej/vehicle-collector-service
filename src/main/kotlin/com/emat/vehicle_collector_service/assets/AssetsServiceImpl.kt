@@ -6,8 +6,11 @@ import com.emat.vehicle_collector_service.api.dto.AssetsResponse
 import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
+import com.emat.vehicle_collector_service.assets.infra.FileInfo
 import com.emat.vehicle_collector_service.assets.thumbnail.ThumbnailService
+import com.emat.vehicle_collector_service.infrastructure.error.ResourceNotFoundException
 import com.emat.vehicle_collector_service.infrastructure.storage.StorageService
+import com.emat.vehicle_collector_service.session.SessionOwnership
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -27,16 +30,17 @@ class AssetsServiceImpl(
     private val validator: AssetUploadValidator,
     private val exifExtractor: ExifMetadataExtractor,
     private val storage: StorageService,
-    private val thumbnailService: ThumbnailService
+    private val thumbnailService: ThumbnailService,
+    private val sessionOwnership: SessionOwnership
 ) : AssetsService {
 
     private val log = LoggerFactory.getLogger(AssetsService::class.java)
 
-    override fun findByPublicId(assetPublicId: String): Mono<AssetDocument> {
-        return assetRepository.findByAssetPublicId(assetPublicId)
+    override fun findByPublicId(assetPublicId: String, ownerId: String): Mono<AssetDocument> {
+        return assetRepository.findByAssetPublicIdAndOwnerId(assetPublicId, ownerId)
             .switchIfEmpty(
                 Mono.error(
-                    AssetUploadException("Asset not found: $assetPublicId", HttpStatus.NOT_FOUND, "ASSET_NOT_FOUND")
+                    ResourceNotFoundException("Asset $assetPublicId not found for owner $ownerId")
                 )
             )
     }
@@ -45,11 +49,7 @@ class AssetsServiceImpl(
         val pageRequest = pageRequest(assetsOwnerQuery)
         var criteria = emptyList<Criteria>()
         assetsOwnerQuery.type?.let { criteria += Criteria.where("assetType").`is`(it) }
-        assetsOwnerQuery.status?.let { criteria += Criteria.where("assetStatus").`is`(it) }
-        assetsOwnerQuery.hasSpot?.let { want ->
-            criteria += if (want) Criteria.where("spotId").ne(null)
-            else Criteria.where("spotId").`is`(null)
-        }
+        assetsOwnerQuery.status?.let { criteria += Criteria.where("file.status").`is`(it) }
 
         val query = Query().addCriteria(Criteria().andOperator(*criteria.toTypedArray()))
             .with(pageRequest)
@@ -76,11 +76,7 @@ class AssetsServiceImpl(
             Criteria.where("ownerId").`is`(ownerId)
         )
         assetsOwnerQuery.type?.let { criteria += Criteria.where("assetType").`is`(it) }
-        assetsOwnerQuery.status?.let { criteria += Criteria.where("assetStatus").`is`(it) }
-        assetsOwnerQuery.hasSpot?.let { want ->
-            criteria += if (want) Criteria.where("spotId").ne(null)
-            else Criteria.where("spotId").`is`(null)
-        }
+        assetsOwnerQuery.status?.let { criteria += Criteria.where("file.status").`is`(it) }
 
         val query = Query().addCriteria(Criteria().andOperator(*criteria.toTypedArray()))
             .with(pageRequest)
@@ -113,15 +109,19 @@ class AssetsServiceImpl(
                 )
             )
             .flatMap { asset ->
-                storage.delete(asset.storageKeyPath)
-                    .doOnSuccess { log.info("Deleted file ${asset.storageKeyPath}") }
+                storage.delete(asset.file.storageKeyPath)
+                    .doOnSuccess { log.info("Deleted file ${asset.file.storageKeyPath}") }
                     .then(assetRepository.deleteById(asset.id!!))
             }.then()
     }
 
-    override fun getAllAssetsBySessionPublicId(sessionPublicId: String, assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
+    override fun getAllAssetsBySessionPublicId(
+        sessionPublicId: String,
+        ownerId: String,
+        assetsOwnerQuery: AssetsOwnerQuery
+    ): Mono<AssetsResponse> {
         val pageRequest = pageRequest(assetsOwnerQuery)
-        return assetRepository.findAllBySessionPublicId(sessionPublicId, pageRequest)
+        return assetRepository.findAllBySessionPublicIdAndOwnerId(sessionPublicId, ownerId, pageRequest)
             .map { AssetMapper.toAssetResponse(it) }
             .collectList()
             .map { assets ->
@@ -147,21 +147,25 @@ class AssetsServiceImpl(
         assetRepository.findAllBySessionPublicIdOrderByCreatedAtDesc(sessionPublicId)
             .map { AssetMapper.toDomain(it) }
 
-    override fun countAllBySessionPublicIdId(sessionPublicId: String): Mono<Long> {
+    override fun countAllBySessionPublicId(sessionPublicId: String): Mono<Long> {
         return assetRepository.countAllBySessionPublicId(sessionPublicId)
     }
 
-    override fun findLastAssetThumbnail320BySessionPublicIdId(sessionPublicId: String): Mono<ThumbnailInfo> {
+    override fun findLastAssetThumbnail320BySessionPublicId(sessionPublicId: String): Mono<ThumbnailInfo> {
         return assetRepository.findFirstBySessionPublicIdOrderByCreatedAtDesc(sessionPublicId)
             .flatMap { asset ->
-                val thumb320 = asset.thumbnails
-                    ?.firstOrNull { it.size == ThumbnailSize.THUMB_320 && it.storageKeyPath.isNotBlank() }
+                val thumb320 = asset.file.thumbnails
+                    .firstOrNull { it.size == ThumbnailSize.THUMB_320 && it.storageKeyPath.isNotBlank() }
                 Mono.justOrEmpty(thumb320)
             }
             .map { ThumbnailInfo(size = it.size, storageKeyPath = it.storageKeyPath) }
     }
 
-    override fun saveAsset(assetRequest: AssetRequest): Mono<AssetResponse> {
+    override fun saveAsset(assetRequest: AssetRequest): Mono<AssetResponse> =
+        sessionOwnership.requireOwned(assetRequest.sessionPublicId, assetRequest.ownerId)
+            .then(Mono.defer { storeAsset(assetRequest) })
+
+    private fun storeAsset(assetRequest: AssetRequest): Mono<AssetResponse> {
         val filePart = assetRequest.filePart
         val mime = filePart.headers().contentType?.toString()?.lowercase()
         val filename = filePart.filename()
@@ -169,40 +173,37 @@ class AssetsServiceImpl(
         val storageKeyPath = generateStorageKeyPathAndPublicId(assetRequest.assetType, fileExtension)
         return validator.assetUploadValidate(filePart, assetRequest.assetType)
             .flatMap { validatedFile ->
-                val exifMono =
-                    exifExtractor.extract(validatedFile.tmpFile, mime).defaultIfEmpty(ExifInfo(null, null, null, null))
-                val storeMono = storage.store(validatedFile.tmpFile, storageKeyPath.first)
+                val metadataMono: Mono<ExtractedMetadata> =
+                    exifExtractor.extract(validatedFile.tmpFile, mime).defaultIfEmpty(ExtractedMetadata())
+                val storeMono: Mono<String> = storage.store(validatedFile.tmpFile, storageKeyPath.first)
 
-                exifMono.zipWith(storeMono)
+                metadataMono.zipWith(storeMono)
                     .flatMap { tuple ->
-                        val exif = tuple.t1
-                        val storagePath = tuple.t2
-                        val asset = Asset(
+                        val metadata = tuple.t1
+                        val document = AssetDocument(
                             id = null,
                             assetPublicId = storageKeyPath.second,
                             ownerId = assetRequest.ownerId,
                             sessionPublicId = assetRequest.sessionPublicId,
-                            spotId = null,
-                            type = assetRequest.assetType,
-                            status = AssetStatus.RAW,
-                            mimeType = mime,
-                            originalFilename = filename,
-                            storageKeyPath = storagePath,
-                            locationSource = LocationSource.UNKNOWN,
-                            exif = exif,
-                            deviceGeoLocation = null,
-                            thumbnails = emptyList(),
-                            createdAt = null,
-                            updatedAt = null
+                            assetType = assetRequest.assetType,
+                            file = FileInfo(
+                                storageKeyPath = tuple.t2,
+                                originalFilename = filename,
+                                mimeType = mime,
+                                width = metadata.width,
+                                height = metadata.height,
+                                status = AssetStatus.RAW
+                            ),
+                            capture = metadata.capture
                         )
-                        assetRepository.save(AssetMapper.toDocument(asset))
+                        assetRepository.save(document)
                     }
                     .doOnNext { savedDoc ->
                         if (savedDoc.assetType == AssetType.IMAGE) {
                             thumbnailService.generateAndSave(
                                 assetId = savedDoc.id!!,
                                 assetPublicId = savedDoc.assetPublicId,
-                                originalStorageKeyPath = savedDoc.storageKeyPath
+                                originalStorageKeyPath = savedDoc.file.storageKeyPath
                             ).subscribe(
                                 {},
                                 { e -> log.error("Thumbnail background job failed: {}", e.message) }

@@ -18,6 +18,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.http.codec.multipart.FilePart
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
@@ -45,11 +47,12 @@ class AssetController(
     @PostMapping("/sessions/{sessionPublicId}/assets", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @ResponseStatus(HttpStatus.CREATED)
     fun uploadAsset(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable(name = "sessionPublicId") sessionPublicId: String,
         @RequestPart("file") filePart: FilePart,
-        @RequestParam("ownerId") ownerId: String,
         @RequestParam("type") type: AssetType
     ): Mono<AssetResponse> {
+        val ownerId = jwt.subject
         log.info(
             "Received POST request '/api/public/sessions/{sessionPublicId}/assets' sessionPublicId: {}. ownerId: {}, type: {}, fileName: {}",
             sessionPublicId,
@@ -77,14 +80,15 @@ class AssetController(
             description = "Assets successful retrieved",
         ), ApiResponse(responseCode = "500", description = "Internal server error")]
     )
-    @GetMapping("/assets/owner/{ownerId}")
+    @GetMapping("/assets")
     fun allAssetsByOwnerId(
-        @PathVariable ownerId: String,
+        @AuthenticationPrincipal jwt: Jwt,
         @ModelAttribute query: AssetsOwnerQuery,
     ): Mono<AssetsResponse> {
+        val ownerId = jwt.subject
         log.info(
-            "Received GET '/api/public/assets/owner/{ownerId}' ownerId={}, status={}, type={}, hasSpot={}, page={}, size={}, sort={}",
-            ownerId, query.status, query.type, query.hasSpot, query.page, query.size, query.sortDir
+            "Received GET '/api/public/assets' ownerId={}, status={}, type={}, page={}, size={}, sort={}",
+            ownerId, query.status, query.type, query.page, query.size, query.sortDir
         )
         return assetsService.getAllAssetsByOwnerId(ownerId, query)
 
@@ -102,14 +106,15 @@ class AssetController(
     )
     @GetMapping("/assets/session/{sessionPublicId}")
     fun allAssetsBySessionId(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable sessionPublicId: String,
         @ModelAttribute query: AssetsOwnerQuery,
     ): Mono<AssetsResponse> {
         log.info(
-            "Received GET '/api/public/assets/session/{sessionId}' ownerId={}, status={}, type={}, hasSpot={}, page={}, size={}, sort={}",
-            sessionPublicId, query.status, query.type, query.hasSpot, query.page, query.size, query.sortDir
+            "Received GET '/api/public/assets/session/{sessionId}' sessionPublicId={}, status={}, type={}, page={}, size={}, sort={}",
+            sessionPublicId, query.status, query.type, query.page, query.size, query.sortDir
         )
-        return assetsService.getAllAssetsBySessionPublicId(sessionPublicId, query)
+        return assetsService.getAllAssetsBySessionPublicId(sessionPublicId, jwt.subject, query)
     }
 
     @Operation(
@@ -122,12 +127,13 @@ class AssetController(
     )
     @GetMapping("/assets/{assetPublicId}/thumbnail")
     fun getThumbnail(
+        @AuthenticationPrincipal jwt: Jwt,
         @PathVariable assetPublicId: String,
         @RequestParam(defaultValue = "THUMB_320") size: ThumbnailSize
     ): Mono<ResponseEntity<Resource>> {
-        return assetsService.findByPublicId(assetPublicId)
+        return assetsService.findByPublicId(assetPublicId, jwt.subject)
             .map { asset ->
-                val thumb = asset.thumbnails.firstOrNull { it.size == size }
+                val thumb = asset.file.thumbnails.firstOrNull { it.size == size }
                     ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Thumbnail not ready yet")
 
                 val resource: Resource = FileSystemResource(

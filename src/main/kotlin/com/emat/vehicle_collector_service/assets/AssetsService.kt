@@ -9,14 +9,18 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface AssetsService {
-    fun findByPublicId(assetPublicId: String): Mono<AssetDocument>
+    fun findByPublicId(assetPublicId: String, ownerId: String): Mono<AssetDocument>
     fun getAllAssets(assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse>
     fun getAllAssetsByOwnerId(ownerId: String, assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse>
     fun deleteAssetByPublicId(assetPublicId: String): Mono<Void>
     fun saveAsset(assetRequest: AssetRequest): Mono<AssetResponse>
 
-    fun getAllAssetsBySessionPublicId(sessionPublicId: String, assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse>
+    fun getAllAssetsBySessionPublicId(
+        sessionPublicId: String,
+        ownerId: String,
+        assetsOwnerQuery: AssetsOwnerQuery
+    ): Mono<AssetsResponse>
     fun getAllAssetsBySessionPublicIdDescByCreatedAt(sessionPublicId: String): Flux<Asset>
-    fun countAllBySessionPublicIdId(sessionPublicId: String): Mono<Long>
-    fun findLastAssetThumbnail320BySessionPublicIdId(sessionPublicId: String): Mono<ThumbnailInfo>
+    fun countAllBySessionPublicId(sessionPublicId: String): Mono<Long>
+    fun findLastAssetThumbnail320BySessionPublicId(sessionPublicId: String): Mono<ThumbnailInfo>
 }

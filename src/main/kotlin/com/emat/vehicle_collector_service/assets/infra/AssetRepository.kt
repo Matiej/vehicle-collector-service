@@ -13,4 +13,11 @@ interface AssetRepository: ReactiveMongoRepository<AssetDocument, String> {
     fun countAllBySessionPublicId(sessionPublicId: String): Mono<Long>
     fun findFirstBySessionPublicIdOrderByCreatedAtDesc(sessionPublicId: String): Mono<AssetDocument>
     fun findByAssetPublicId(assetPublicId: String): Mono<AssetDocument>
+
+    fun findByAssetPublicIdAndOwnerId(assetPublicId: String, ownerId: String): Mono<AssetDocument>
+    fun findAllBySessionPublicIdAndOwnerId(
+        sessionPublicId: String,
+        ownerId: String,
+        pageRequest: Pageable
+    ): Flux<AssetDocument>
 }

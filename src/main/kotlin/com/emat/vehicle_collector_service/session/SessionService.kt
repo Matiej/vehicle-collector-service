@@ -9,9 +9,13 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface SessionService {
-    fun createSession(req: CreateSessionRequest): Mono<SessionResponse>
-    fun getSessionBySessionPublicId(sessionId: String): Mono<SessionResponse>
+    fun createSession(req: CreateSessionRequest, ownerId: String): Mono<SessionResponse>
+    fun getSessionBySessionPublicId(sessionPublicId: String, ownerId: String): Mono<SessionResponse>
     fun listSessions(ownerId: String, page: Int, size: Int, sort: Sort.Direction): Flux<SessionSummaryResponse>
     fun listSessions(page: Int, size: Int, sort: Sort.Direction): Flux<SessionSummaryResponse>
-    fun changeSessionStatus(sessionPublicId: String, sessionStatus: SessionStatus): Mono<SessionResponse>
+    fun changeSessionStatus(
+        sessionPublicId: String,
+        ownerId: String,
+        sessionStatus: SessionStatus
+    ): Mono<SessionResponse>
 }

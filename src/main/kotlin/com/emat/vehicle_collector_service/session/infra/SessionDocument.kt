@@ -20,7 +20,6 @@ data class SessionDocument(
     @Indexed
     val ownerId: String,
     val sessionMode: SessionMode,
-    val spotId: String? = null,
     var status: SessionStatus = SessionStatus.CREATED,
     val device: String?,
     @CreatedDate

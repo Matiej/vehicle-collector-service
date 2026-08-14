@@ -1,6 +1,5 @@
 package com.emat.vehicle_collector_service.api.dto
 
-import com.emat.vehicle_collector_service.assets.domain.GeoPoint
 import com.emat.vehicle_collector_service.session.domain.SessionMode
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
@@ -14,8 +13,6 @@ data class CreateSessionRequest(
         message = "sessionName contains invalid characters"
     )
     val sessionName: String?,
-    val clientVersion: String?,
-    val ownerId: String,
-    val uploadLocation: GeoPoint? = null
+    val clientVersion: String?
 ) {
 }

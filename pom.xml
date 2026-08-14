@@ -32,6 +32,9 @@
 		<springdoc-openapi>2.8.15</springdoc-openapi>
 		<metadata-extractor>2.19.0</metadata-extractor>
 		<thumbnailator>0.4.20</thumbnailator>
+		<groovy.version>4.0.27</groovy.version>
+		<spock.version>2.4-M6-groovy-4.0</spock.version>
+		<integration.source.dir>${project.basedir}/src/integration</integration.source.dir>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -129,6 +132,40 @@
 			<version>5.2.0</version>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- Testy integracyjne: mockJwt() zamiast prawdziwego Keycloaka -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Testy integracyjne: Mongo w kontenerze -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>mongodb</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Testy integracyjne: Spock (Groovy) -->
+		<dependency>
+			<groupId>org.apache.groovy</groupId>
+			<artifactId>groovy</artifactId>
+			<version>${groovy.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.spockframework</groupId>
+			<artifactId>spock-core</artifactId>
+			<version>${spock.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.spockframework</groupId>
+			<artifactId>spock-spring</artifactId>
+			<version>${spock.version}</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -138,6 +175,75 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>3.6.1</version>
+				<executions>
+					<execution>
+						<id>add-integration-test-source</id>
+						<phase>generate-test-sources</phase>
+						<goals>
+							<goal>add-test-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>${integration.source.dir}/groovy</source>
+							</sources>
+						</configuration>
+					</execution>
+					<execution>
+						<id>add-integration-test-resources</id>
+						<phase>generate-test-resources</phase>
+						<goals>
+							<goal>add-test-resource</goal>
+						</goals>
+						<configuration>
+							<resources>
+								<resource>
+									<directory>${integration.source.dir}/resources</directory>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.gmavenplus</groupId>
+				<artifactId>gmavenplus-plugin</artifactId>
+				<version>4.1.1</version>
+				<executions>
+					<execution>
+						<id>compile-integration-specs</id>
+						<phase>test-compile</phase>
+						<goals>
+							<goal>compileTests</goal>
+						</goals>
+						<configuration>
+							<testSources>
+								<testSource>
+									<directory>${integration.source.dir}/groovy</directory>
+									<includes>
+										<include>**/*.groovy</include>
+									</includes>
+								</testSource>
+							</testSources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.jetbrains.kotlin</groupId>

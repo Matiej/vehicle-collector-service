@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: vehicle-collector-service-integration
+  data:
+    mongodb:
+      auto-index-creation: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:1/realms/integration/protocol/openid-connect/certs
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+app:
+  version: integration-test
+  tmp-assets-dir: "./target/integration/assets_tmp"
+  assets-dir: "./target/integration/assets"
+  max-file-size: "20"
+  thumbnails:
+    quality: 0.80
+    format: jpg
+  security:
+    swagger-public: false
+    swagger-token: ""
+    swagger-url: ""
+
+keycloak:
+  admin:
+    base-url: http://localhost:1
+    realm: integration
+    client-id: integration-client
+    client-secret: integration-secret
+    frontend-client-id: integration-fe
+    roles:
+      REGULAR_USER: 00000000-0000-0000-0000-000000000001
+      ADMIN: 00000000-0000-0000-0000-000000000002
+
+logging:
+  level:
+    org.springframework.data.mongodb.core.ReactiveMongoTemplate: INFO
+    org.testcontainers: INFO
+    com.github.dockerjava: WARN
