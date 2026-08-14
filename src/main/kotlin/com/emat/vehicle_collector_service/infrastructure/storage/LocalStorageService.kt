@@ -28,25 +28,28 @@ class LocalStorageService(
     }
 
     override fun store(filePart: FilePart, storageKeyPath: String): Mono<String> {
-        val path = Path.of(appData.getAssetsDir())
-        val target = path.resolve(storageKeyPath)
-        val parent = target.parent
-        Files.createDirectories(parent)
-        return filePart.transferTo(target)
+        val target = Path.of(appData.getAssetsDir()).resolve(storageKeyPath)
+
+        return createParentDirectories(target)
+            .then(filePart.transferTo(target))
             .thenReturn(storageKeyPath)
     }
 
     override fun store(file: File, storageKeyPath: String): Mono<String> {
-        val path = Path.of(appData.getAssetsDir())
-        val target = path.resolve(storageKeyPath)
-        val parent = target.parent
-        Files.createDirectories(parent)
+        val target = Path.of(appData.getAssetsDir()).resolve(storageKeyPath)
 
-        return Mono.fromCallable {
-            file.copyTo(target.toFile(), overwrite = true)
-            storageKeyPath
-        }
+        return createParentDirectories(target)
+            .then(
+                Mono.fromCallable {
+                    file.copyTo(target.toFile(), overwrite = true)
+                    storageKeyPath
+                }.subscribeOn(Schedulers.boundedElastic())
+            )
     }
+
+    private fun createParentDirectories(target: Path): Mono<Path> =
+        Mono.fromCallable { Files.createDirectories(target.parent) }
+            .subscribeOn(Schedulers.boundedElastic())
 
     override fun delete(storageKeyPath: String): Mono<Void> {
         val target = Path.of(appData.getAssetsDir()).resolve(storageKeyPath)

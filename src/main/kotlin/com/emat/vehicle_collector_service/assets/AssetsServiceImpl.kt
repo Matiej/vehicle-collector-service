@@ -6,7 +6,6 @@ import com.emat.vehicle_collector_service.api.dto.AssetsResponse
 import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
-import com.emat.vehicle_collector_service.assets.infra.CaptureInfo
 import com.emat.vehicle_collector_service.assets.infra.FileInfo
 import com.emat.vehicle_collector_service.assets.thumbnail.ThumbnailService
 import com.emat.vehicle_collector_service.infrastructure.error.ResourceNotFoundException
@@ -174,12 +173,13 @@ class AssetsServiceImpl(
         val storageKeyPath = generateStorageKeyPathAndPublicId(assetRequest.assetType, fileExtension)
         return validator.assetUploadValidate(filePart, assetRequest.assetType)
             .flatMap { validatedFile ->
-                val captureMono: Mono<CaptureInfo> =
-                    exifExtractor.extract(validatedFile.tmpFile, mime).defaultIfEmpty(CaptureInfo())
+                val metadataMono: Mono<ExtractedMetadata> =
+                    exifExtractor.extract(validatedFile.tmpFile, mime).defaultIfEmpty(ExtractedMetadata())
                 val storeMono: Mono<String> = storage.store(validatedFile.tmpFile, storageKeyPath.first)
 
-                captureMono.zipWith(storeMono)
+                metadataMono.zipWith(storeMono)
                     .flatMap { tuple ->
+                        val metadata = tuple.t1
                         val document = AssetDocument(
                             id = null,
                             assetPublicId = storageKeyPath.second,
@@ -190,9 +190,11 @@ class AssetsServiceImpl(
                                 storageKeyPath = tuple.t2,
                                 originalFilename = filename,
                                 mimeType = mime,
+                                width = metadata.width,
+                                height = metadata.height,
                                 status = AssetStatus.RAW
                             ),
-                            capture = tuple.t1
+                            capture = metadata.capture
                         )
                         assetRepository.save(document)
                     }

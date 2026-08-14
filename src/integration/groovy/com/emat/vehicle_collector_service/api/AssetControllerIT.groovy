@@ -94,6 +94,8 @@ class AssetControllerIT extends PublicApiSpec {
                 .jsonPath('$.sessionPublicId').isEqualTo(session.sessionPublicId)
                 .jsonPath('$.file.originalFilename').isEqualTo("sample.jpg")
                 .jsonPath('$.file.mimeType').isEqualTo("image/jpeg")
+                .jsonPath('$.file.width').isEqualTo(2048)
+                .jsonPath('$.file.height').isEqualTo(1536)
                 .jsonPath('$.capture.gpsSource').isEqualTo("EXIF")
                 .jsonPath('$.id').doesNotExist()
                 .jsonPath('$.spotId').doesNotExist()

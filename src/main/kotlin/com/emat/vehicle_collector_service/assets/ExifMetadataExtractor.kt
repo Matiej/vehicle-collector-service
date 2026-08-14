@@ -1,14 +1,18 @@
 package com.emat.vehicle_collector_service.assets
 
 import com.drew.imaging.ImageMetadataReader
+import com.drew.metadata.Directory
 import com.drew.metadata.Metadata
 import com.drew.metadata.exif.ExifDirectoryBase
 import com.drew.metadata.exif.ExifIFD0Directory
 import com.drew.metadata.exif.ExifSubIFDDirectory
 import com.drew.metadata.exif.GpsDirectory
+import com.drew.metadata.heif.HeifDirectory
+import com.drew.metadata.jpeg.JpegDirectory
 import com.drew.metadata.mov.QuickTimeDirectory
 import com.drew.metadata.mov.metadata.QuickTimeMetadataDirectory
 import com.drew.metadata.mp4.Mp4Directory
+import com.drew.metadata.png.PngDirectory
 import com.emat.vehicle_collector_service.assets.domain.GeoPoint
 import com.emat.vehicle_collector_service.assets.infra.CameraInfo
 import com.emat.vehicle_collector_service.assets.infra.CaptureInfo
@@ -22,23 +26,29 @@ import java.time.Instant
 import java.util.*
 
 
+data class ExtractedMetadata(
+    val capture: CaptureInfo = CaptureInfo(),
+    val width: Int? = null,
+    val height: Int? = null
+)
+
 @Component
 class ExifMetadataExtractor {
 
-    fun extract(file: File, mimeType: String?): Mono<CaptureInfo> =
+    fun extract(file: File, mimeType: String?): Mono<ExtractedMetadata> =
         Mono.defer { Mono.justOrEmpty(extractBlocking(file, mimeType)) }
             .subscribeOn(Schedulers.boundedElastic())
 
-    private fun extractBlocking(file: File, mimeType: String?): CaptureInfo? =
+    private fun extractBlocking(file: File, mimeType: String?): ExtractedMetadata? =
         mimeType?.let {
             when {
                 mimeType.startsWith("image/") -> extractFromImage(file)
-                mimeType.startsWith("video/") -> extractFromMovOrMp4(file, mimeType)
+                mimeType.startsWith("video/") -> extractFromMovOrMp4(file, mimeType)?.let(::extractedMetadata)
                 else -> null
             }
         }
 
-    private fun extractFromImage(file: File): CaptureInfo? {
+    private fun extractFromImage(file: File): ExtractedMetadata? {
         try {
             FileInputStream(file).use { ins ->
                 val metadata: Metadata = ImageMetadataReader.readMetadata(ins)
@@ -58,13 +68,57 @@ class ExifMetadataExtractor {
                     focalLength = subIfd?.getDoubleObject(ExifDirectoryBase.TAG_FOCAL_LENGTH)
                 )
 
-                return captureInfo(takenAt, geo?.latitude, geo?.longitude, camera)
+                return extractedMetadata(
+                    captureInfo(takenAt, geo?.latitude, geo?.longitude, camera),
+                    imageDimensions(metadata)
+                )
             }
         } catch (_: Exception) {
             return null
         }
 
     }
+
+    private fun imageDimensions(metadata: Metadata): Dimensions? =
+        dimensions(metadata, HeifDirectory::class.java, HeifDirectory.TAG_IMAGE_WIDTH, HeifDirectory.TAG_IMAGE_HEIGHT)
+            ?: dimensions(
+                metadata,
+                JpegDirectory::class.java,
+                JpegDirectory.TAG_IMAGE_WIDTH,
+                JpegDirectory.TAG_IMAGE_HEIGHT
+            )
+            ?: dimensions(metadata, PngDirectory::class.java, PngDirectory.TAG_IMAGE_WIDTH, PngDirectory.TAG_IMAGE_HEIGHT)
+            ?: dimensions(
+                metadata,
+                ExifSubIFDDirectory::class.java,
+                ExifDirectoryBase.TAG_EXIF_IMAGE_WIDTH,
+                ExifDirectoryBase.TAG_EXIF_IMAGE_HEIGHT
+            )
+
+    private fun <T : Directory> dimensions(
+        metadata: Metadata,
+        directoryType: Class<T>,
+        widthTag: Int,
+        heightTag: Int
+    ): Dimensions? =
+        metadata.getDirectoriesOfType(directoryType)
+            .asSequence()
+            .mapNotNull { directory ->
+                val width = directory.getInteger(widthTag)
+                val height = directory.getInteger(heightTag)
+                if (width != null && height != null && width > 0 && height > 0) Dimensions(width, height) else null
+            }
+            .firstOrNull()
+
+    private fun extractedMetadata(capture: CaptureInfo?, dimensions: Dimensions? = null): ExtractedMetadata? =
+        if (capture == null && dimensions == null) null
+        else ExtractedMetadata(
+            capture = capture ?: CaptureInfo(),
+            width = dimensions?.width,
+            height = dimensions?.height
+        )
+
+    private data class Dimensions(val width: Int, val height: Int)
 
     private fun extractFromMovOrMp4(file: File, mimeType: String): CaptureInfo? {
         val filename = file.name.lowercase(Locale.ROOT)
