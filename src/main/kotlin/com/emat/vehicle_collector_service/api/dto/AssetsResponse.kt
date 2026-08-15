@@ -28,10 +28,10 @@ data class AssetResponse(
 data class AssetFileResponse(
     val originalFilename: String?,
     val mimeType: String?,
-    val sizeBytes: Long?,
+    val sizeBytes: Long,
     val width: Int?,
     val height: Int?,
-    val sha256: String?
+    val sha256: String
 )
 
 data class AssetCaptureResponse(
