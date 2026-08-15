@@ -138,6 +138,8 @@ class AssetMapperTest {
         storageKeyPath = "image/2026/8/asset.jpg",
         originalFilename = "sample.jpg",
         mimeType = "image/jpeg",
+        sizeBytes = 509768,
+        sha256 = "0153cfff78fc38bb7ec85879549f9c2bd4a6b3ff363c93927ad8cb85f1faabe6",
         status = status,
         thumbnails = thumbnails
     )

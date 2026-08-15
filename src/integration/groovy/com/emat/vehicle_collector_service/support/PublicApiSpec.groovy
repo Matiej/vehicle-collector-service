@@ -28,6 +28,7 @@ import spock.lang.Specification
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 import java.util.function.Supplier
 
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt
@@ -112,10 +113,10 @@ abstract public class PublicApiSpec extends Specification {
                                 "image/2026/8/${shortId()}.jpg",
                                 "sample.jpg",
                                 "image/jpeg",
+                                1024L,
                                 null,
                                 null,
-                                null,
-                                null,
+                                sha256Of(shortId()),
                                 AssetStatus.RAW,
                                 null,
                                 thumbnails
@@ -145,5 +146,9 @@ abstract public class PublicApiSpec extends Specification {
 
     private static String shortId() {
         UUID.randomUUID().toString().take(8)
+    }
+
+    private static String sha256Of(String seed) {
+        MessageDigest.getInstance("SHA-256").digest(seed.bytes).encodeHex().toString()
     }
 }

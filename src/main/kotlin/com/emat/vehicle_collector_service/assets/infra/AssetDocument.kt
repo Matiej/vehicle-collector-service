@@ -52,10 +52,10 @@ data class FileInfo(
     val storageKeyPath: String,
     val originalFilename: String?,
     val mimeType: String?,
-    val sizeBytes: Long? = null,
+    val sizeBytes: Long,
     val width: Int? = null,
     val height: Int? = null,
-    val sha256: String? = null,
+    val sha256: String,
     val status: AssetStatus = AssetStatus.RAW,
     val failureReason: String? = null,
     val thumbnails: List<Thumbnail> = emptyList()

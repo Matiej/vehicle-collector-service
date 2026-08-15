@@ -29,6 +29,7 @@ class AssetsServiceImpl(
     private val template: ReactiveMongoTemplate,
     private val validator: AssetUploadValidator,
     private val exifExtractor: ExifMetadataExtractor,
+    private val fileMetadataReader: FileMetadataReader,
     private val storage: StorageService,
     private val thumbnailService: ThumbnailService,
     private val sessionOwnership: SessionOwnership
@@ -176,10 +177,12 @@ class AssetsServiceImpl(
                 val metadataMono: Mono<ExtractedMetadata> =
                     exifExtractor.extract(validatedFile.tmpFile, mime).defaultIfEmpty(ExtractedMetadata())
                 val storeMono: Mono<String> = storage.store(validatedFile.tmpFile, storageKeyPath.first)
+                val fileMetadataMono: Mono<FileMetadata> = fileMetadataReader.read(validatedFile.tmpFile)
 
-                metadataMono.zipWith(storeMono)
+                Mono.zip(metadataMono, storeMono, fileMetadataMono)
                     .flatMap { tuple ->
                         val metadata = tuple.t1
+                        val fileMetadata = tuple.t3
                         val document = AssetDocument(
                             id = null,
                             assetPublicId = storageKeyPath.second,
@@ -190,8 +193,10 @@ class AssetsServiceImpl(
                                 storageKeyPath = tuple.t2,
                                 originalFilename = filename,
                                 mimeType = mime,
+                                sizeBytes = fileMetadata.sizeBytes,
                                 width = metadata.width,
                                 height = metadata.height,
+                                sha256 = fileMetadata.sha256,
                                 status = AssetStatus.RAW
                             ),
                             capture = metadata.capture
