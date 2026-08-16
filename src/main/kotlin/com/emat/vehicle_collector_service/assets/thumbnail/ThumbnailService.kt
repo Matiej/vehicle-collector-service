@@ -1,9 +1,11 @@
 package com.emat.vehicle_collector_service.assets.thumbnail
 
+import com.emat.vehicle_collector_service.assets.domain.AssetStatus
 import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.Thumbnail
 import com.emat.vehicle_collector_service.configuration.AppData
+import com.mongodb.client.result.UpdateResult
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
@@ -37,18 +39,40 @@ class ThumbnailService(
             }
         }
             .subscribeOn(thumbnailScheduler)
-            .flatMap { thumbnails -> updateAssetThumbnails(assetId, thumbnails) }
+            .flatMap { thumbnails -> markThumbsReady(assetId, thumbnails) }
             .doOnSuccess { log.info("Thumbnails READY for asset={}", assetPublicId) }
-            .doOnError { e -> log.error("Thumbnail FAILED for asset={}: {}", assetPublicId, e.message, e) }
+            .onErrorResume { e ->
+                log.error("Thumbnail FAILED for asset={}: {}", assetPublicId, e.message, e)
+                markFailed(assetId).then(Mono.error(e))
+            }
             .then()
     }
 
-    private fun updateAssetThumbnails(assetId: String, thumbnails: List<Thumbnail>): Mono<com.mongodb.client.result.UpdateResult> {
-        val update = Update().set("file.thumbnails", thumbnails)
-        return reactiveMongoTemplate.updateFirst(
+    private fun markThumbsReady(assetId: String, thumbnails: List<Thumbnail>): Mono<UpdateResult> {
+        val update = Update()
+            .set("file.thumbnails", thumbnails)
+            .set("file.status", AssetStatus.THUMBS_READY)
+            .unset("file.failureReason")
+        return update(assetId, update)
+    }
+
+    private fun markFailed(assetId: String): Mono<UpdateResult> {
+        val update = Update()
+            .set("file.status", AssetStatus.FAILED)
+            .set("file.failureReason", THUMBNAIL_FAILURE_REASON)
+        return update(assetId, update)
+            .doOnError { e -> log.error("Cannot mark asset={} as FAILED: {}", assetId, e.message, e) }
+            .onErrorResume { Mono.empty() }
+    }
+
+    private fun update(assetId: String, update: Update): Mono<UpdateResult> =
+        reactiveMongoTemplate.updateFirst(
             Query.query(Criteria.where("_id").`is`(assetId)),
             update,
             AssetDocument::class.java
         )
+
+    companion object {
+        const val THUMBNAIL_FAILURE_REASON: String = "Thumbnail generation failed"
     }
 }

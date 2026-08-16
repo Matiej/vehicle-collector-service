@@ -119,20 +119,20 @@ class AssetMapperTest {
     fun `domain asset takes status and thumbnails from the file block`() {
         val document = document(
             file = fileInfo(
-                status = AssetStatus.VECTORIZED,
+                status = AssetStatus.THUMBS_READY,
                 thumbnails = listOf(Thumbnail(ThumbnailSize.THUMB_640, "thumbnails/asset_thumb_640.jpg"))
             )
         )
 
         val asset = AssetMapper.toDomain(document)
 
-        assertEquals(AssetStatus.VECTORIZED, asset.status)
+        assertEquals(AssetStatus.THUMBS_READY, asset.status)
         assertEquals(1, asset.thumbnails.size)
         assertEquals(ThumbnailSize.THUMB_640, asset.thumbnails.first().size)
     }
 
     private fun fileInfo(
-        status: AssetStatus = AssetStatus.RAW,
+        status: AssetStatus = AssetStatus.UPLOADED,
         thumbnails: List<Thumbnail> = emptyList()
     ) = FileInfo(
         storageKeyPath = "image/2026/8/asset.jpg",

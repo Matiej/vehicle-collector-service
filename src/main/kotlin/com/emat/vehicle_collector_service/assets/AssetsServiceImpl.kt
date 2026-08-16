@@ -50,7 +50,6 @@ class AssetsServiceImpl(
         val pageRequest = pageRequest(assetsOwnerQuery)
         var criteria = emptyList<Criteria>()
         assetsOwnerQuery.type?.let { criteria += Criteria.where("assetType").`is`(it) }
-        assetsOwnerQuery.status?.let { criteria += Criteria.where("file.status").`is`(it) }
 
         val query = Query().addCriteria(Criteria().andOperator(*criteria.toTypedArray()))
             .with(pageRequest)
@@ -77,7 +76,6 @@ class AssetsServiceImpl(
             Criteria.where("ownerId").`is`(ownerId)
         )
         assetsOwnerQuery.type?.let { criteria += Criteria.where("assetType").`is`(it) }
-        assetsOwnerQuery.status?.let { criteria += Criteria.where("file.status").`is`(it) }
 
         val query = Query().addCriteria(Criteria().andOperator(*criteria.toTypedArray()))
             .with(pageRequest)
@@ -197,7 +195,7 @@ class AssetsServiceImpl(
                                 width = metadata.width,
                                 height = metadata.height,
                                 sha256 = fileMetadata.sha256,
-                                status = AssetStatus.RAW
+                                status = AssetStatus.UPLOADED
                             ),
                             capture = metadata.capture
                         )

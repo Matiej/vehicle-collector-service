@@ -87,8 +87,8 @@ class AssetController(
     ): Mono<AssetsResponse> {
         val ownerId = jwt.subject
         log.info(
-            "Received GET '/api/public/assets' ownerId={}, status={}, type={}, page={}, size={}, sort={}",
-            ownerId, query.status, query.type, query.page, query.size, query.sortDir
+            "Received GET '/api/public/assets' ownerId={}, type={}, page={}, size={}, sort={}",
+            ownerId, query.type, query.page, query.size, query.sortDir
         )
         return assetsService.getAllAssetsByOwnerId(ownerId, query)
 
@@ -111,8 +111,8 @@ class AssetController(
         @ModelAttribute query: AssetsOwnerQuery,
     ): Mono<AssetsResponse> {
         log.info(
-            "Received GET '/api/public/assets/session/{sessionId}' sessionPublicId={}, status={}, type={}, page={}, size={}, sort={}",
-            sessionPublicId, query.status, query.type, query.page, query.size, query.sortDir
+            "Received GET '/api/public/assets/session/{sessionId}' sessionPublicId={}, type={}, page={}, size={}, sort={}",
+            sessionPublicId, query.type, query.page, query.size, query.sortDir
         )
         return assetsService.getAllAssetsBySessionPublicId(sessionPublicId, jwt.subject, query)
     }
