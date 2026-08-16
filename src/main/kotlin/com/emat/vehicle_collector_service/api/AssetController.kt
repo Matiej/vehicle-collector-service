@@ -145,7 +145,7 @@ class AssetController(
                 }
 
                 ResponseEntity.ok()
-                    .header("Cache-Control", "public, max-age=31536000, immutable")
+                    .header("Cache-Control", "private, max-age=31536000, immutable")
                     .contentType(MediaType.IMAGE_JPEG)
                     .body(resource)
             }
