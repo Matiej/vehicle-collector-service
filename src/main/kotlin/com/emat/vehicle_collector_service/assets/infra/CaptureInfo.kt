@@ -11,7 +11,9 @@ data class CaptureInfo(
     val gpsSource: GpsSource = GpsSource.EXIF,
     val place: Place? = null,
     val camera: CameraInfo? = null
-)
+) {
+    fun activeGps(): GeoPoint? = if (gpsSource == GpsSource.USER) userGps else exifGps
+}
 
 data class Place(
     val countryCode: String? = null,
