@@ -1,6 +1,7 @@
 package com.emat.vehicle_collector_service.session
 
 import com.emat.vehicle_collector_service.api.dto.CreateSessionRequest
+import com.emat.vehicle_collector_service.api.dto.PageResponse
 import com.emat.vehicle_collector_service.api.dto.SessionResponse
 import com.emat.vehicle_collector_service.api.dto.SessionSummaryResponse
 import com.emat.vehicle_collector_service.assets.AssetsService
@@ -49,28 +50,37 @@ class SessionServiceImpl(
         page: Int,
         size: Int,
         sort: Sort.Direction
-    ): Flux<SessionSummaryResponse> =
-        findSessionsAssets(
-            sessionRepository.findByOwnerId(
-                ownerId,
-                pageRequest(
-                    page,
-                    size,
-                    Sort.by(sort, "createdAt")
-                )
-            )
+    ): Mono<PageResponse<SessionSummaryResponse>> =
+        toPage(
+            sessionRepository.countByOwnerId(ownerId),
+            sessionRepository.findByOwnerId(ownerId, pageRequest(page, size, Sort.by(sort, "createdAt"))),
+            page,
+            size
         )
 
-    override fun listSessions(page: Int, size: Int, sort: Sort.Direction): Flux<SessionSummaryResponse> =
-        findSessionsAssets(
-            sessionRepository.findAllBy(
-                pageRequest(
-                    page,
-                    size,
-                    Sort.by(sort, "createdAt")
-                )
-            ).sort()
+    override fun listSessions(page: Int, size: Int, sort: Sort.Direction): Mono<PageResponse<SessionSummaryResponse>> =
+        toPage(
+            sessionRepository.count(),
+            sessionRepository.findAllBy(pageRequest(page, size, Sort.by(sort, "createdAt"))),
+            page,
+            size
         )
+
+    private fun toPage(
+        total: Mono<Long>,
+        sessions: Flux<SessionDocument>,
+        page: Int,
+        size: Int
+    ): Mono<PageResponse<SessionSummaryResponse>> =
+        Mono.zip(total, findSessionsAssets(sessions).collectList())
+            .map { tuple ->
+                PageResponse.of(
+                    content = tuple.t2,
+                    page = page,
+                    size = size,
+                    totalElements = tuple.t1
+                )
+            }
 
     override fun changeSessionStatus(
         sessionPublicId: String,

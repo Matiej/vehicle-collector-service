@@ -1,18 +1,24 @@
 package com.emat.vehicle_collector_service.session
 
 import com.emat.vehicle_collector_service.api.dto.CreateSessionRequest
+import com.emat.vehicle_collector_service.api.dto.PageResponse
 import com.emat.vehicle_collector_service.api.dto.SessionResponse
 import com.emat.vehicle_collector_service.api.dto.SessionSummaryResponse
 import com.emat.vehicle_collector_service.session.domain.SessionStatus
 import org.springframework.data.domain.Sort
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 interface SessionService {
     fun createSession(req: CreateSessionRequest, ownerId: String): Mono<SessionResponse>
     fun getSessionBySessionPublicId(sessionPublicId: String, ownerId: String): Mono<SessionResponse>
-    fun listSessions(ownerId: String, page: Int, size: Int, sort: Sort.Direction): Flux<SessionSummaryResponse>
-    fun listSessions(page: Int, size: Int, sort: Sort.Direction): Flux<SessionSummaryResponse>
+    fun listSessions(
+        ownerId: String,
+        page: Int,
+        size: Int,
+        sort: Sort.Direction
+    ): Mono<PageResponse<SessionSummaryResponse>>
+
+    fun listSessions(page: Int, size: Int, sort: Sort.Direction): Mono<PageResponse<SessionSummaryResponse>>
     fun changeSessionStatus(
         sessionPublicId: String,
         ownerId: String,

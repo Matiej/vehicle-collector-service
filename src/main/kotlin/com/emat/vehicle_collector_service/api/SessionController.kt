@@ -1,8 +1,10 @@
 package com.emat.vehicle_collector_service.api
 
 import com.emat.vehicle_collector_service.api.dto.CreateSessionRequest
+import com.emat.vehicle_collector_service.api.dto.PageResponse
 import com.emat.vehicle_collector_service.api.dto.SessionResponse
 import com.emat.vehicle_collector_service.api.dto.SessionSummaryResponse
+import com.emat.vehicle_collector_service.api.dto.SessionsQuery
 import com.emat.vehicle_collector_service.session.SessionService
 import com.emat.vehicle_collector_service.session.domain.SessionStatus
 import io.swagger.v3.oas.annotations.Operation
@@ -10,13 +12,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
-import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
-import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @RestController
@@ -41,16 +41,14 @@ class SessionController(
     @GetMapping
     fun listAllByOwner(
         @AuthenticationPrincipal jwt: Jwt,
-        @RequestParam(defaultValue = "0") page: Int,
-        @RequestParam(defaultValue = "50") size: Int,
-        @RequestParam(defaultValue = "DESC") sortDir: Sort.Direction
-    ): Flux<SessionSummaryResponse> {
+        @ModelAttribute @Valid query: SessionsQuery
+    ): Mono<PageResponse<SessionSummaryResponse>> {
         val ownerId = jwt.subject
         log.info(
             "Received GET request '/api/public/sessions/' for page: {}, size: {} and owner {}",
-            page, size, ownerId
+            query.page, query.size, ownerId
         )
-        return sessionService.listSessions(ownerId, page, size, sortDir)
+        return sessionService.listSessions(ownerId, query.page, query.size, query.sortDir)
     }
 
     @Operation(

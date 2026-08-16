@@ -26,9 +26,9 @@ class AssetControllerIT extends PublicApiSpec {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath('$.assets.length()').isEqualTo(1)
-                .jsonPath('$.assets[0].assetPublicId').isEqualTo(ownAsset.assetPublicId)
-                .jsonPath('$.assets[0].ownerId').isEqualTo(USER_A)
+                .jsonPath('$.content.length()').isEqualTo(1)
+                .jsonPath('$.content[0].assetPublicId').isEqualTo(ownAsset.assetPublicId)
+                .jsonPath('$.content[0].ownerId').isEqualTo(USER_A)
     }
 
     def "session assets list returns own assets"() {
@@ -41,8 +41,8 @@ class AssetControllerIT extends PublicApiSpec {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath('$.assets.length()').isEqualTo(1)
-                .jsonPath('$.assets[0].assetPublicId').isEqualTo(asset.assetPublicId)
+                .jsonPath('$.content.length()').isEqualTo(1)
+                .jsonPath('$.content[0].assetPublicId').isEqualTo(asset.assetPublicId)
     }
 
     def "session assets list is empty for a session of another user"() {
@@ -55,7 +55,77 @@ class AssetControllerIT extends PublicApiSpec {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath('$.assets.length()').isEqualTo(0)
+                .jsonPath('$.content.length()').isEqualTo(0)
+                .jsonPath('$.totalElements').isEqualTo(0)
+                .jsonPath('$.totalPages').isEqualTo(0)
+    }
+
+    def "totalElements is the size of the whole set, not of the page"() {
+        given:
+        5.times { givenAsset(USER_A, null) }
+        3.times { givenAsset(USER_B, null) }
+
+        expect:
+        asUser(USER_A).get().uri("/api/public/assets?page=${page}&size=2")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.content.length()').isEqualTo(expectedOnPage)
+                .jsonPath('$.page').isEqualTo(page)
+                .jsonPath('$.size').isEqualTo(2)
+                .jsonPath('$.totalElements').isEqualTo(5)
+                .jsonPath('$.totalPages').isEqualTo(3)
+
+        where:
+        page || expectedOnPage
+        0    || 2
+        1    || 2
+        2    || 1
+    }
+
+    def "session assets list returns the same envelope as the owner list"() {
+        given:
+        SessionDocument session = givenSession(USER_A)
+        3.times { givenAsset(USER_A, session.sessionPublicId) }
+        givenAsset(USER_A, null)
+
+        expect:
+        asUser(USER_A).get().uri("/api/public/assets/session/${session.sessionPublicId}?page=0&size=2")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.content.length()').isEqualTo(2)
+                .jsonPath('$.page').isEqualTo(0)
+                .jsonPath('$.size').isEqualTo(2)
+                .jsonPath('$.totalElements').isEqualTo(3)
+                .jsonPath('$.totalPages').isEqualTo(2)
+    }
+
+    def "assets list rejects size=0 with 400 instead of dividing by zero"() {
+        expect:
+        asUser(USER_A).get().uri("/api/public/assets?size=0")
+                .exchange()
+                .expectStatus().isBadRequest()
+    }
+
+    def "assets list rejects a negative page with 400"() {
+        expect:
+        asUser(USER_A).get().uri("/api/public/assets?page=-1")
+                .exchange()
+                .expectStatus().isBadRequest()
+    }
+
+    def "type filter narrows both the page and totalElements"() {
+        given:
+        3.times { givenAsset(USER_A, null) }
+
+        expect:
+        asUser(USER_A).get().uri("/api/public/assets?type=AUDIO")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.content.length()').isEqualTo(0)
+                .jsonPath('$.totalElements').isEqualTo(0)
     }
 
     def "thumbnail of own asset is served"() {
@@ -121,10 +191,10 @@ class AssetControllerIT extends PublicApiSpec {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath('$.assets[0].assetPublicId').isEqualTo(asset.assetPublicId)
-                .jsonPath('$.assets[0].capture.gps.lat').isEqualTo(52.2297d)
-                .jsonPath('$.assets[0].capture.gps.lng').isEqualTo(21.0122d)
-                .jsonPath('$.assets[0].capture.gpsSource').isEqualTo("USER")
+                .jsonPath('$.content[0].assetPublicId').isEqualTo(asset.assetPublicId)
+                .jsonPath('$.content[0].capture.gps.lat').isEqualTo(52.2297d)
+                .jsonPath('$.content[0].capture.gps.lng').isEqualTo(21.0122d)
+                .jsonPath('$.content[0].capture.gpsSource').isEqualTo("USER")
     }
 
     def "generated thumbnails land in the file block"() {
@@ -177,7 +247,7 @@ class AssetControllerIT extends PublicApiSpec {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath('$.assets.length()').isEqualTo(1)
+                .jsonPath('$.content.length()').isEqualTo(1)
     }
 
     def "upload to a session of another user returns 404 and stores nothing"() {

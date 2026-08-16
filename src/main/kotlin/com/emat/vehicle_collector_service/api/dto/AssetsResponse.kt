@@ -4,15 +4,6 @@ import com.emat.vehicle_collector_service.assets.domain.AssetType
 import com.emat.vehicle_collector_service.assets.domain.GpsSource
 import java.time.Instant
 
-data class AssetsResponse(
-    val assets: List<AssetResponse>,
-    val page: Int?,
-    val size: Int?,
-    val totalCount: Int?,
-    val totalPages: Int?
-) {
-}
-
 data class AssetResponse(
     val assetPublicId: String,
     val ownerId: String,

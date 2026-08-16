@@ -12,6 +12,7 @@ interface SessionRepository: ReactiveMongoRepository<SessionDocument, String> {
     fun findByOwnerId(ownerId: String): Flux<SessionDocument>
     fun findByOwnerId(ownerId: String, pageRequest: PageRequest): Flux<SessionDocument>
     fun findAllBy(pageRequest: Pageable): Flux<SessionDocument>
+    fun countByOwnerId(ownerId: String): Mono<Long>
     fun findBySessionPublicIdAndOwnerId(sessionPublicId: String, ownerId: String): Mono<SessionDocument>
     fun existsBySessionPublicIdAndOwnerId(sessionPublicId: String, ownerId: String): Mono<Boolean>
 }
