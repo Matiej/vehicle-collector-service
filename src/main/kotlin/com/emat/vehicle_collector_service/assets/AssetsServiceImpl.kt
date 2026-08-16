@@ -2,7 +2,7 @@ package com.emat.vehicle_collector_service.assets
 
 import com.emat.vehicle_collector_service.api.dto.AssetResponse
 import com.emat.vehicle_collector_service.api.dto.AssetsOwnerQuery
-import com.emat.vehicle_collector_service.api.dto.AssetsResponse
+import com.emat.vehicle_collector_service.api.dto.PageResponse
 import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
@@ -46,55 +46,17 @@ class AssetsServiceImpl(
             )
     }
 
-    override fun getAllAssets(assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
-        val pageRequest = pageRequest(assetsOwnerQuery)
-        var criteria = emptyList<Criteria>()
-        assetsOwnerQuery.type?.let { criteria += Criteria.where("assetType").`is`(it) }
+    override fun getAllAssets(assetsOwnerQuery: AssetsOwnerQuery): Mono<PageResponse<AssetResponse>> =
+        findPage(filters(assetsOwnerQuery), assetsOwnerQuery)
 
-        val query = Query().addCriteria(Criteria().andOperator(*criteria.toTypedArray()))
-            .with(pageRequest)
-
-        return template.find(query, AssetDocument::class.java)
-            .map { AssetMapper.toAssetResponse(it) }
-            .collectList()
-            .map { assets ->
-                val totalCount = assets.size
-                val pages = getNumberOfPages(totalCount, assetsOwnerQuery.size)
-                AssetsResponse(
-                    assets = assets,
-                    page = assetsOwnerQuery.page,
-                    size = assetsOwnerQuery.size,
-                    totalCount = totalCount,
-                    totalPages = pages
-                )
-            }
-    }
-
-    override fun getAllAssetsByOwnerId(ownerId: String, assetsOwnerQuery: AssetsOwnerQuery): Mono<AssetsResponse> {
-        val pageRequest = pageRequest(assetsOwnerQuery)
-        val criteria = mutableListOf(
-            Criteria.where("ownerId").`is`(ownerId)
+    override fun getAllAssetsByOwnerId(
+        ownerId: String,
+        assetsOwnerQuery: AssetsOwnerQuery
+    ): Mono<PageResponse<AssetResponse>> =
+        findPage(
+            listOf(Criteria.where("ownerId").`is`(ownerId)) + filters(assetsOwnerQuery),
+            assetsOwnerQuery
         )
-        assetsOwnerQuery.type?.let { criteria += Criteria.where("assetType").`is`(it) }
-
-        val query = Query().addCriteria(Criteria().andOperator(*criteria.toTypedArray()))
-            .with(pageRequest)
-
-        return template.find(query, AssetDocument::class.java)
-            .map { AssetMapper.toAssetResponse(it) }
-            .collectList()
-            .map { assets ->
-                val totalCount = assets.size
-                val pages = getNumberOfPages(totalCount, assetsOwnerQuery.size)
-                AssetsResponse(
-                    assets = assets,
-                    page = assetsOwnerQuery.page,
-                    size = assetsOwnerQuery.size,
-                    totalCount = totalCount,
-                    totalPages = pages
-                )
-            }
-    }
 
     override fun deleteAssetByPublicId(assetPublicId: String): Mono<Void> {
         return assetRepository.findByAssetPublicId(assetPublicId)
@@ -118,29 +80,50 @@ class AssetsServiceImpl(
         sessionPublicId: String,
         ownerId: String,
         assetsOwnerQuery: AssetsOwnerQuery
-    ): Mono<AssetsResponse> {
-        val pageRequest = pageRequest(assetsOwnerQuery)
-        return assetRepository.findAllBySessionPublicIdAndOwnerId(sessionPublicId, ownerId, pageRequest)
-            .map { AssetMapper.toAssetResponse(it) }
-            .collectList()
-            .map { assets ->
-                AssetsResponse(
-                    assets = assets,
-                    page = null,
-                    size = null,
-                    totalCount = null,
-                    totalPages = null
-                )
-            }
+    ): Mono<PageResponse<AssetResponse>> =
+        findPage(
+            listOf(
+                Criteria.where("ownerId").`is`(ownerId),
+                Criteria.where("sessionPublicId").`is`(sessionPublicId)
+            ) + filters(assetsOwnerQuery),
+            assetsOwnerQuery
+        )
+
+    private fun findPage(
+        criteria: List<Criteria>,
+        assetsOwnerQuery: AssetsOwnerQuery
+    ): Mono<PageResponse<AssetResponse>> {
+        val filter = combine(criteria)
+        val countQuery = Query(filter)
+        val dataQuery = Query(filter).with(pageRequest(assetsOwnerQuery))
+
+        return Mono.zip(
+            template.count(countQuery, AssetDocument::class.java),
+            template.find(dataQuery, AssetDocument::class.java)
+                .map { AssetMapper.toAssetResponse(it) }
+                .collectList()
+        ).map { tuple ->
+            PageResponse.of(
+                content = tuple.t2,
+                page = assetsOwnerQuery.page,
+                size = assetsOwnerQuery.size,
+                totalElements = tuple.t1
+            )
+        }
     }
 
-    private fun pageRequest(assetsOwnerQuery: AssetsOwnerQuery): PageRequest {
-        val pageRequest = PageRequest.of(
+    private fun filters(assetsOwnerQuery: AssetsOwnerQuery): List<Criteria> =
+        listOfNotNull(assetsOwnerQuery.type?.let { Criteria.where("assetType").`is`(it) })
+
+    private fun combine(criteria: List<Criteria>): Criteria =
+        if (criteria.isEmpty()) Criteria() else Criteria().andOperator(*criteria.toTypedArray())
+
+    private fun pageRequest(assetsOwnerQuery: AssetsOwnerQuery): PageRequest =
+        PageRequest.of(
             assetsOwnerQuery.page,
-            assetsOwnerQuery.size, Sort.by(assetsOwnerQuery.sortDir, "createdAt")
+            assetsOwnerQuery.size,
+            Sort.by(assetsOwnerQuery.sortDir, "createdAt")
         )
-        return pageRequest
-    }
 
     override fun getAllAssetsBySessionPublicIdDescByCreatedAt(sessionPublicId: String): Flux<Asset> =
         assetRepository.findAllBySessionPublicIdOrderByCreatedAtDesc(sessionPublicId)
@@ -232,9 +215,4 @@ class AssetsServiceImpl(
     private fun generatePublicId(type: String): String =
         "asset_" + LocalDate.now().year + "_" + LocalDate.now().month.value + "_" + type + "_" +
                 java.util.UUID.randomUUID().toString().take(8)
-
-    private fun getNumberOfPages(totalCount: Int, pageSize: Int): Int {
-        val pages: Double = (totalCount.toDouble() / pageSize.toDouble())
-        return if (pages - pages.toInt() > 0) (pages + 1).toInt() else pages.toInt()
-    }
 }

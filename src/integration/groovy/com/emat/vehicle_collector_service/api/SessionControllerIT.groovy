@@ -7,7 +7,7 @@ import com.emat.vehicle_collector_service.support.PublicApiSpec
 
 class SessionControllerIT extends PublicApiSpec {
 
-    def "sessions list returns only sessions of the token owner"() {
+    def "sessions list returns only sessions of the token owner, wrapped in a page envelope"() {
         given:
         SessionDocument ownSession = givenSession(USER_A)
         givenSession(USER_B)
@@ -17,9 +17,36 @@ class SessionControllerIT extends PublicApiSpec {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath('$.length()').isEqualTo(1)
-                .jsonPath('$[0].sessionPublicId').isEqualTo(ownSession.sessionPublicId)
-                .jsonPath('$[0].ownerId').isEqualTo(USER_A)
+                .jsonPath('$.content.length()').isEqualTo(1)
+                .jsonPath('$.content[0].sessionPublicId').isEqualTo(ownSession.sessionPublicId)
+                .jsonPath('$.content[0].ownerId').isEqualTo(USER_A)
+                .jsonPath('$.page').isEqualTo(0)
+                .jsonPath('$.size').isEqualTo(50)
+                .jsonPath('$.totalElements').isEqualTo(1)
+                .jsonPath('$.totalPages').isEqualTo(1)
+    }
+
+    def "sessions totalElements counts only own sessions, not the whole page"() {
+        given:
+        5.times { givenSession(USER_A) }
+        3.times { givenSession(USER_B) }
+
+        expect:
+        asUser(USER_A).get().uri("/api/public/sessions?page=1&size=2")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.content.length()').isEqualTo(2)
+                .jsonPath('$.totalElements').isEqualTo(5)
+                .jsonPath('$.totalPages').isEqualTo(3)
+                .jsonPath('$.page').isEqualTo(1)
+    }
+
+    def "sessions list rejects size=0 with 400 instead of dividing by zero"() {
+        expect:
+        asUser(USER_A).get().uri("/api/public/sessions?size=0")
+                .exchange()
+                .expectStatus().isBadRequest()
     }
 
     def "getting own session succeeds"() {

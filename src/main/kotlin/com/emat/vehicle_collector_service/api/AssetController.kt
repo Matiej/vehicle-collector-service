@@ -2,7 +2,7 @@ package com.emat.vehicle_collector_service.api
 
 import com.emat.vehicle_collector_service.api.dto.AssetResponse
 import com.emat.vehicle_collector_service.api.dto.AssetsOwnerQuery
-import com.emat.vehicle_collector_service.api.dto.AssetsResponse
+import com.emat.vehicle_collector_service.api.dto.PageResponse
 import com.emat.vehicle_collector_service.assets.AssetsService
 import com.emat.vehicle_collector_service.assets.domain.AssetRequest
 import com.emat.vehicle_collector_service.assets.domain.AssetType
@@ -11,6 +11,7 @@ import com.emat.vehicle_collector_service.configuration.AppData
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
+import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
@@ -83,8 +84,8 @@ class AssetController(
     @GetMapping("/assets")
     fun allAssetsByOwnerId(
         @AuthenticationPrincipal jwt: Jwt,
-        @ModelAttribute query: AssetsOwnerQuery,
-    ): Mono<AssetsResponse> {
+        @ModelAttribute @Valid query: AssetsOwnerQuery,
+    ): Mono<PageResponse<AssetResponse>> {
         val ownerId = jwt.subject
         log.info(
             "Received GET '/api/public/assets' ownerId={}, type={}, page={}, size={}, sort={}",
@@ -108,8 +109,8 @@ class AssetController(
     fun allAssetsBySessionId(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable sessionPublicId: String,
-        @ModelAttribute query: AssetsOwnerQuery,
-    ): Mono<AssetsResponse> {
+        @ModelAttribute @Valid query: AssetsOwnerQuery,
+    ): Mono<PageResponse<AssetResponse>> {
         log.info(
             "Received GET '/api/public/assets/session/{sessionId}' sessionPublicId={}, type={}, page={}, size={}, sort={}",
             sessionPublicId, query.type, query.page, query.size, query.sortDir
