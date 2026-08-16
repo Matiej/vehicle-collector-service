@@ -1,5 +1,6 @@
 package com.emat.vehicle_collector_service.api
 
+import com.emat.vehicle_collector_service.assets.domain.AssetStatus
 import com.emat.vehicle_collector_service.assets.domain.GeoPoint
 import com.emat.vehicle_collector_service.assets.domain.GpsSource
 import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
@@ -143,7 +144,40 @@ class AssetControllerIT extends PublicApiSpec {
             AssetDocument stored = assetRepository.findAll().blockFirst()
             assert stored.file.thumbnails.size() == ThumbnailSize.values().length
             assert stored.file.thumbnails.every { it.storageKeyPath.startsWith("thumbnails/") }
+            assert stored.file.status == AssetStatus.THUMBS_READY
+            assert stored.file.failureReason == null
         }
+    }
+
+    def "uploaded audio stays UPLOADED because it has no thumbnails"() {
+        given:
+        SessionDocument session = givenSession(USER_A)
+
+        when:
+        asUser(USER_A).post()
+                .uri("/api/public/sessions/${session.sessionPublicId}/assets?type=AUDIO")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .bodyValue(sampleAudioMultipart())
+                .exchange()
+                .expectStatus().isCreated()
+
+        then:
+        AssetDocument stored = assetRepository.findAll().blockFirst()
+        stored.file.status == AssetStatus.UPLOADED
+        stored.file.failureReason == null
+        stored.file.thumbnails.isEmpty()
+    }
+
+    def "status is not a filter of the public assets list anymore"() {
+        given:
+        givenAsset(USER_A, null)
+
+        expect:
+        asUser(USER_A).get().uri("/api/public/assets?status=WHATEVER")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.assets.length()').isEqualTo(1)
     }
 
     def "upload to a session of another user returns 404 and stores nothing"() {
@@ -165,6 +199,12 @@ class AssetControllerIT extends PublicApiSpec {
     private static MultiValueMap sampleImageMultipart() {
         MultipartBodyBuilder builder = new MultipartBodyBuilder()
         builder.part("file", new ClassPathResource("assets/sample.jpg")).contentType(MediaType.IMAGE_JPEG)
+        builder.build()
+    }
+
+    private static MultiValueMap sampleAudioMultipart() {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder()
+        builder.part("file", new ClassPathResource("assets/sample.mp3")).contentType(MediaType.parseMediaType("audio/mpeg"))
         builder.build()
     }
 }

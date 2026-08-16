@@ -56,7 +56,7 @@ data class FileInfo(
     val width: Int? = null,
     val height: Int? = null,
     val sha256: String,
-    val status: AssetStatus = AssetStatus.RAW,
+    val status: AssetStatus = AssetStatus.UPLOADED,
     val failureReason: String? = null,
     val thumbnails: List<Thumbnail> = emptyList()
 )

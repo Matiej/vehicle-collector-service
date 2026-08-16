@@ -117,7 +117,7 @@ abstract public class PublicApiSpec extends Specification {
                                 null,
                                 null,
                                 sha256Of(shortId()),
-                                AssetStatus.RAW,
+                                AssetStatus.UPLOADED,
                                 null,
                                 thumbnails
                         ),
