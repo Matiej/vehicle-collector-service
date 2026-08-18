@@ -24,6 +24,16 @@ app:
   thumbnails:
     quality: 0.80
     format: jpg
+  geocoding:
+    enabled: false
+    provider-url: http://localhost:1/reverse
+    user-agent: "vehicle-collector-service/integration"
+    language: pl
+    rate-limit-per-second: 1
+    cache-precision: 3
+    timeout-ms: 500
+    max-retries: 0
+    retry-backoff-ms: 10
   security:
     swagger-public: false
     swagger-token: ""

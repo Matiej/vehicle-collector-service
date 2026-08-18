@@ -128,7 +128,7 @@ class AssetControllerIT extends PublicApiSpec {
                 .jsonPath('$.totalElements').isEqualTo(0)
     }
 
-    def "thumbnail of own asset is served"() {
+    def "thumbnail of own asset is served and is never publicly cacheable"() {
         given:
         AssetDocument asset = givenAssetWithThumbnail(USER_A, null)
 
@@ -137,6 +137,7 @@ class AssetControllerIT extends PublicApiSpec {
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.IMAGE_JPEG)
+                .expectHeader().valueEquals("Cache-Control", "private, max-age=31536000, immutable")
     }
 
     def "thumbnail of another users asset returns 404"() {

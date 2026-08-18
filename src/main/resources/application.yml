@@ -28,6 +28,17 @@ app:
   thumbnails:
     quality: 0.80
     format: jpg
+  geocoding:
+    enabled: true
+    provider-url: https://nominatim.openstreetmap.org/reverse
+    user-agent: "vehicle-collector-service/@project.version@"
+    language: pl
+    rate-limit-per-second: 1
+    cache-precision: 3
+    timeout-ms: 5000
+    max-retries: 2
+    retry-backoff-ms: 2000
+    cache-max-entries: 10000
   security:
     swagger-public: false
     swagger-url: https://api.lan

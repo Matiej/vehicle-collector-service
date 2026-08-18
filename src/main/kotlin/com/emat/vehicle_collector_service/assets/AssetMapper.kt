@@ -43,7 +43,7 @@ object AssetMapper {
             ),
             capture = AssetCaptureResponse(
                 takenAt = assetDocument.capture.takenAt,
-                gps = activeGps(assetDocument.capture)?.let { GeoPointResponse(it.lat, it.lng) },
+                gps = assetDocument.capture.activeGps()?.let { GeoPointResponse(it.lat, it.lng) },
                 gpsSource = assetDocument.capture.gpsSource,
                 place = assetDocument.capture.place?.let {
                     PlaceResponse(
@@ -62,7 +62,4 @@ object AssetMapper {
                 ?.let { "/api/public/assets/${assetDocument.assetPublicId}/thumbnail?size=THUMB_640" },
             createdAt = assetDocument.createdAt ?: assetDocument.updatedAt ?: Instant.now()
         )
-
-    private fun activeGps(capture: CaptureInfo): GeoPoint? =
-        if (capture.gpsSource == GpsSource.USER) capture.userGps else capture.exifGps
 }

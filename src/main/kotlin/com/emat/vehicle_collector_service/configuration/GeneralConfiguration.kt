@@ -1,5 +1,6 @@
 package com.emat.vehicle_collector_service.configuration
 
+import com.emat.vehicle_collector_service.infrastructure.geocoding.GeocodingProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -10,7 +11,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 
 
 @Configuration
-@EnableConfigurationProperties(CorsProperties::class)
+@EnableConfigurationProperties(CorsProperties::class, GeocodingProperties::class)
 class GeneralConfiguration {
 
     @Bean

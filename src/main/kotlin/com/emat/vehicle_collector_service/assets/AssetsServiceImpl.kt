@@ -6,6 +6,7 @@ import com.emat.vehicle_collector_service.api.dto.PageResponse
 import com.emat.vehicle_collector_service.assets.domain.*
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
+import com.emat.vehicle_collector_service.assets.geocoding.AssetGeocodingService
 import com.emat.vehicle_collector_service.assets.infra.FileInfo
 import com.emat.vehicle_collector_service.assets.thumbnail.ThumbnailService
 import com.emat.vehicle_collector_service.infrastructure.error.ResourceNotFoundException
@@ -32,6 +33,7 @@ class AssetsServiceImpl(
     private val fileMetadataReader: FileMetadataReader,
     private val storage: StorageService,
     private val thumbnailService: ThumbnailService,
+    private val assetGeocodingService: AssetGeocodingService,
     private val sessionOwnership: SessionOwnership
 ) : AssetsService {
 
@@ -195,6 +197,14 @@ class AssetsServiceImpl(
                                 { e -> log.error("Thumbnail background job failed: {}", e.message) }
                             )
                         }
+                        assetGeocodingService.geocodeAndSave(
+                            assetId = savedDoc.id!!,
+                            assetPublicId = savedDoc.assetPublicId,
+                            gps = savedDoc.capture.activeGps()
+                        ).subscribe(
+                            {},
+                            { e -> log.error("Geocoding background job failed: {}", e.message) }
+                        )
                     }
                     .map(AssetMapper::toAssetResponse)
                     .doFinally { _ -> validatedFile.tmpFile.delete() }

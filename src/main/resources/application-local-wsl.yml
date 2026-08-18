@@ -20,6 +20,8 @@ springdoc:
 app:
   tmp-assets-dir: "./assets_tmp"
   assets-dir: "./assets"
+  geocoding:
+    enabled: false
   security:
     swagger-public: true
     swagger-url: http://localhost:8080
