@@ -14,6 +14,8 @@ interface AssetsService {
     fun getAllAssetsByOwnerId(ownerId: String, assetsOwnerQuery: AssetsOwnerQuery): Mono<PageResponse<AssetResponse>>
     fun deleteAssetByPublicId(assetPublicId: String): Mono<Void>
     fun saveAsset(assetRequest: AssetRequest): Mono<AssetResponse>
+    fun updateLocation(assetPublicId: String, ownerId: String, gps: GeoPoint): Mono<AssetResponse>
+    fun resetLocation(assetPublicId: String, ownerId: String): Mono<AssetResponse>
 
     fun getAllAssetsBySessionPublicId(
         sessionPublicId: String,

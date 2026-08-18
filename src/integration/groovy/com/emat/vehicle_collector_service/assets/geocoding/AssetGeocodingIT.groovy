@@ -17,6 +17,7 @@ import org.springframework.test.context.DynamicPropertySource
 import org.springframework.util.MultiValueMap
 import org.spockframework.spring.SpringBean
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Sinks
 import spock.util.concurrent.PollingConditions
 
 import java.util.function.Supplier
@@ -113,6 +114,69 @@ class AssetGeocodingIT extends PublicApiSpec {
 
         and:
         assetRepository.findByAssetPublicId(asset.assetPublicId).block().capture.place == null
+    }
+
+    def "location endpoint returns before geocoding and saves the resolved place later"() {
+        given:
+        AssetDocument asset = givenAsset(USER_A, null, [], new CaptureInfo(null, KRAKOW, null, GpsSource.EXIF, null, null))
+        Sinks.One<ResolvedPlace> result = Sinks.one()
+
+        when:
+        asUser(USER_A).put().uri("/api/public/assets/${asset.assetPublicId}/location")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue([lat: WARSAW.lat, lng: WARSAW.lng])
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.capture.gps.lat').isEqualTo(WARSAW.lat)
+                .jsonPath('$.capture.gps.lng').isEqualTo(WARSAW.lng)
+                .jsonPath('$.capture.gpsSource').isEqualTo("USER")
+                .jsonPath('$.capture.place').doesNotExist()
+
+        then:
+        1 * geocoder.reverse(WARSAW) >> result.asMono()
+
+        and:
+        assetRepository.findByAssetPublicId(asset.assetPublicId).block().capture.place == null
+
+        when:
+        result.tryEmitValue(new ResolvedPlace("PL", "Polska", "Warszawa", "mazowieckie"))
+
+        then:
+        new PollingConditions(timeout: 5).eventually {
+            AssetDocument stored = assetRepository.findByAssetPublicId(asset.assetPublicId).block()
+            assert stored.capture.place.city == "Warszawa"
+            assert stored.capture.place.geocodedFrom == WARSAW
+        }
+    }
+
+    def "a stale geocoding result cannot overwrite place for newer coordinates"() {
+        given:
+        AssetDocument asset = givenAsset(USER_A, null, [], new CaptureInfo(null, KRAKOW, null, GpsSource.EXIF, null, null))
+        Sinks.One<ResolvedPlace> staleResult = Sinks.one()
+        1 * geocoder.reverse(KRAKOW) >> staleResult.asMono()
+        assetGeocodingService.geocodeAndSave(asset.id, asset.assetPublicId, KRAKOW).subscribe()
+
+        when:
+        asUser(USER_A).put().uri("/api/public/assets/${asset.assetPublicId}/location")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue([lat: WARSAW.lat, lng: WARSAW.lng])
+                .exchange()
+                .expectStatus().isOk()
+
+        then:
+        1 * geocoder.reverse(WARSAW) >> Mono.empty()
+
+        when:
+        staleResult.tryEmitValue(new ResolvedPlace("PL", "Polska", "Kraków", "małopolskie"))
+
+        then:
+        new PollingConditions(timeout: 5, initialDelay: 0.1).eventually {
+            AssetDocument stored = assetRepository.findByAssetPublicId(asset.assetPublicId).block()
+            assert stored.capture.gpsSource == GpsSource.USER
+            assert stored.capture.userGps == WARSAW
+            assert stored.capture.place == null
+        }
     }
 
     def "uploading a photo without gps costs no geocoding request at all"() {

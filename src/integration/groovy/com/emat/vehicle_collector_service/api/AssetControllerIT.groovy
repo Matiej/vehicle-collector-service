@@ -7,6 +7,7 @@ import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
 import spock.util.concurrent.PollingConditions
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.CaptureInfo
+import com.emat.vehicle_collector_service.assets.infra.Place
 import com.emat.vehicle_collector_service.session.infra.SessionDocument
 import org.springframework.core.io.ClassPathResource
 import org.springframework.http.MediaType
@@ -196,6 +197,132 @@ class AssetControllerIT extends PublicApiSpec {
                 .jsonPath('$.content[0].capture.gps.lat').isEqualTo(52.2297d)
                 .jsonPath('$.content[0].capture.gps.lng').isEqualTo(21.0122d)
                 .jsonPath('$.content[0].capture.gpsSource').isEqualTo("USER")
+    }
+
+    def "user can override gps without changing the original exif coordinates"() {
+        given:
+        GeoPoint exifGps = new GeoPoint(50.0614d, 19.9383d)
+        Place oldPlace = new Place("PL", "Polska", "Kraków", "małopolskie", null, exifGps)
+        AssetDocument asset = givenAsset(
+                USER_A,
+                null,
+                [],
+                new CaptureInfo(null, exifGps, null, GpsSource.EXIF, oldPlace, null)
+        )
+
+        expect:
+        asUser(USER_A).put().uri("/api/public/assets/${asset.assetPublicId}/location")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue([lat: 52.2297d, lng: 21.0122d])
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.capture.gps.lat').isEqualTo(52.2297d)
+                .jsonPath('$.capture.gps.lng').isEqualTo(21.0122d)
+                .jsonPath('$.capture.gpsSource').isEqualTo("USER")
+                .jsonPath('$.capture.place').doesNotExist()
+
+        and:
+        AssetDocument stored = assetRepository.findByAssetPublicId(asset.assetPublicId).block()
+        stored.capture.exifGps == exifGps
+        stored.capture.userGps == new GeoPoint(52.2297d, 21.0122d)
+        stored.capture.gpsSource == GpsSource.USER
+        stored.capture.place == null
+    }
+
+    def "reset restores exif gps and preserves the user pin"() {
+        given:
+        GeoPoint exifGps = new GeoPoint(50.0614d, 19.9383d)
+        GeoPoint userGps = new GeoPoint(52.2297d, 21.0122d)
+        Place oldPlace = new Place("PL", "Polska", "Warszawa", "mazowieckie", null, userGps)
+        AssetDocument asset = givenAsset(
+                USER_A,
+                null,
+                [],
+                new CaptureInfo(null, exifGps, userGps, GpsSource.USER, oldPlace, null)
+        )
+
+        expect:
+        asUser(USER_A).delete().uri("/api/public/assets/${asset.assetPublicId}/location")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.capture.gps.lat').isEqualTo(50.0614d)
+                .jsonPath('$.capture.gps.lng').isEqualTo(19.9383d)
+                .jsonPath('$.capture.gpsSource').isEqualTo("EXIF")
+                .jsonPath('$.capture.place').doesNotExist()
+
+        and:
+        AssetDocument stored = assetRepository.findByAssetPublicId(asset.assetPublicId).block()
+        stored.capture.exifGps == exifGps
+        stored.capture.userGps == userGps
+        stored.capture.gpsSource == GpsSource.EXIF
+        stored.capture.place == null
+    }
+
+    def "reset without exif gps returns the asset to no location"() {
+        given:
+        GeoPoint userGps = new GeoPoint(52.2297d, 21.0122d)
+        AssetDocument asset = givenAsset(
+                USER_A,
+                null,
+                [],
+                new CaptureInfo(null, null, userGps, GpsSource.USER, null, null)
+        )
+
+        expect:
+        asUser(USER_A).delete().uri("/api/public/assets/${asset.assetPublicId}/location")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.capture.gps').doesNotExist()
+                .jsonPath('$.capture.gpsSource').isEqualTo("EXIF")
+                .jsonPath('$.capture.place').doesNotExist()
+
+        and:
+        AssetDocument stored = assetRepository.findByAssetPublicId(asset.assetPublicId).block()
+        stored.capture.userGps == userGps
+        stored.capture.gpsSource == GpsSource.EXIF
+        stored.capture.place == null
+    }
+
+    def "location endpoints hide assets of another user"() {
+        given:
+        AssetDocument foreignAsset = givenAsset(USER_B, null)
+
+        expect:
+        asUser(USER_A).put().uri("/api/public/assets/${foreignAsset.assetPublicId}/location")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue([lat: 52.2297d, lng: 21.0122d])
+                .exchange()
+                .expectStatus().isNotFound()
+
+        and:
+        asUser(USER_A).delete().uri("/api/public/assets/${foreignAsset.assetPublicId}/location")
+                .exchange()
+                .expectStatus().isNotFound()
+    }
+
+    def "location update rejects invalid or incomplete coordinates"() {
+        given:
+        AssetDocument asset = givenAsset(USER_A, null)
+
+        expect:
+        asUser(USER_A).put().uri("/api/public/assets/${asset.assetPublicId}/location")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(body)
+                .exchange()
+                .expectStatus().isBadRequest()
+
+        where:
+        body << [
+                [lat: -90.01d, lng: 0d],
+                [lat: 90.01d, lng: 0d],
+                [lat: 0d, lng: -180.01d],
+                [lat: 0d, lng: 180.01d],
+                [lat: 50d],
+                [lng: 20d]
+        ]
     }
 
     def "generated thumbnails land in the file block"() {

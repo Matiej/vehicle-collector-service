@@ -3,9 +3,11 @@ package com.emat.vehicle_collector_service.api
 import com.emat.vehicle_collector_service.api.dto.AssetResponse
 import com.emat.vehicle_collector_service.api.dto.AssetsOwnerQuery
 import com.emat.vehicle_collector_service.api.dto.PageResponse
+import com.emat.vehicle_collector_service.api.dto.UpdateLocationRequest
 import com.emat.vehicle_collector_service.assets.AssetsService
 import com.emat.vehicle_collector_service.assets.domain.AssetRequest
 import com.emat.vehicle_collector_service.assets.domain.AssetType
+import com.emat.vehicle_collector_service.assets.domain.GeoPoint
 import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
 import com.emat.vehicle_collector_service.configuration.AppData
 import io.swagger.v3.oas.annotations.Operation
@@ -117,6 +119,21 @@ class AssetController(
         )
         return assetsService.getAllAssetsBySessionPublicId(sessionPublicId, jwt.subject, query)
     }
+
+    @PutMapping("/assets/{assetPublicId}/location")
+    fun updateLocation(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable assetPublicId: String,
+        @RequestBody @Valid request: UpdateLocationRequest
+    ): Mono<AssetResponse> =
+        assetsService.updateLocation(assetPublicId, jwt.subject, GeoPoint(request.lat!!, request.lng!!))
+
+    @DeleteMapping("/assets/{assetPublicId}/location")
+    fun resetLocation(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable assetPublicId: String
+    ): Mono<AssetResponse> =
+        assetsService.resetLocation(assetPublicId, jwt.subject)
 
     @Operation(
         summary = "Public GET: serve asset thumbnail",

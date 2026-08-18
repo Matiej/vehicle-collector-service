@@ -16,13 +16,17 @@ import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
+import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
+import org.springframework.data.mongodb.core.query.Update
+import org.springframework.dao.OptimisticLockingFailureException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.LocalDate
+import java.time.Instant
 
 @Service
 class AssetsServiceImpl(
@@ -149,6 +153,61 @@ class AssetsServiceImpl(
         sessionOwnership.requireOwned(assetRequest.sessionPublicId, assetRequest.ownerId)
             .then(Mono.defer { storeAsset(assetRequest) })
 
+    override fun updateLocation(
+        assetPublicId: String,
+        ownerId: String,
+        gps: GeoPoint
+    ): Mono<AssetResponse> =
+        changeLocation(assetPublicId, ownerId, GpsSource.USER, gps)
+
+    override fun resetLocation(assetPublicId: String, ownerId: String): Mono<AssetResponse> =
+        changeLocation(assetPublicId, ownerId, GpsSource.EXIF, null)
+
+    private fun changeLocation(
+        assetPublicId: String,
+        ownerId: String,
+        gpsSource: GpsSource,
+        userGps: GeoPoint?
+    ): Mono<AssetResponse> =
+        findByPublicId(assetPublicId, ownerId)
+            .flatMap { current ->
+                val query = Query.query(
+                    Criteria.where("assetPublicId").`is`(assetPublicId)
+                        .and("ownerId").`is`(ownerId)
+                        .and("version").`is`(current.version)
+                )
+                val update = Update()
+                    .set("capture.gpsSource", gpsSource)
+                    .unset("capture.place")
+                    .set("updatedAt", Instant.now())
+                    .inc("version", 1)
+                if (userGps != null) {
+                    update.set("capture.userGps", userGps)
+                }
+
+                template.findAndModify(
+                    query,
+                    update,
+                    FindAndModifyOptions.options().returnNew(true),
+                    AssetDocument::class.java
+                ).switchIfEmpty(
+                    Mono.error(OptimisticLockingFailureException("Asset $assetPublicId was modified concurrently"))
+                )
+            }
+            .doOnNext(::scheduleGeocoding)
+            .map(AssetMapper::toAssetResponse)
+
+    private fun scheduleGeocoding(asset: AssetDocument) {
+        assetGeocodingService.geocodeAndSave(
+            assetId = asset.id!!,
+            assetPublicId = asset.assetPublicId,
+            gps = asset.capture.activeGps()
+        ).subscribe(
+            {},
+            { e -> log.error("Geocoding background job failed: {}", e.message) }
+        )
+    }
+
     private fun storeAsset(assetRequest: AssetRequest): Mono<AssetResponse> {
         val filePart = assetRequest.filePart
         val mime = filePart.headers().contentType?.toString()?.lowercase()
@@ -197,14 +256,7 @@ class AssetsServiceImpl(
                                 { e -> log.error("Thumbnail background job failed: {}", e.message) }
                             )
                         }
-                        assetGeocodingService.geocodeAndSave(
-                            assetId = savedDoc.id!!,
-                            assetPublicId = savedDoc.assetPublicId,
-                            gps = savedDoc.capture.activeGps()
-                        ).subscribe(
-                            {},
-                            { e -> log.error("Geocoding background job failed: {}", e.message) }
-                        )
+                        scheduleGeocoding(savedDoc)
                     }
                     .map(AssetMapper::toAssetResponse)
                     .doFinally { _ -> validatedFile.tmpFile.delete() }

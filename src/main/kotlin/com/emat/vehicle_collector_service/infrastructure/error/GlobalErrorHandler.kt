@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.BindException
+import org.springframework.dao.OptimisticLockingFailureException
 import org.springframework.web.ErrorResponseException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
@@ -53,6 +54,23 @@ class GlobalErrorHandler {
             exchange.request.path.value(),
             ex.message
         )
+        return ResponseEntity.status(status).body(api)
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException::class)
+    fun handleOptimisticLock(
+        ex: OptimisticLockingFailureException,
+        exchange: ServerWebExchange
+    ): ResponseEntity<ApiError> {
+        val status = HttpStatus.CONFLICT
+        val api = ApiError(
+            path = exchange.request.path.value(),
+            status = status.value(),
+            error = status.reasonPhrase,
+            code = "CONCURRENT_MODIFICATION",
+            message = "Resource was modified concurrently"
+        )
+        log.info("Concurrent modification: {} {} -> {}", exchange.request.method, exchange.request.path.value(), ex.message)
         return ResponseEntity.status(status).body(api)
     }
 

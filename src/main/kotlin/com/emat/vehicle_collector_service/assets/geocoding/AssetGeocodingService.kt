@@ -1,6 +1,7 @@
 package com.emat.vehicle_collector_service.assets.geocoding
 
 import com.emat.vehicle_collector_service.assets.domain.GeoPoint
+import com.emat.vehicle_collector_service.assets.domain.GpsSource
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.Place
 import com.emat.vehicle_collector_service.infrastructure.geocoding.GeocodingProperties
@@ -49,8 +50,16 @@ class AssetGeocodingService(
                 geocodedFrom = gps
             )
         )
+        val activeGps = Criteria().orOperator(
+            Criteria.where("capture.gpsSource").`is`(GpsSource.USER)
+                .and("capture.userGps.lat").`is`(gps.lat)
+                .and("capture.userGps.lng").`is`(gps.lng),
+            Criteria.where("capture.gpsSource").`is`(GpsSource.EXIF)
+                .and("capture.exifGps.lat").`is`(gps.lat)
+                .and("capture.exifGps.lng").`is`(gps.lng)
+        )
         return reactiveMongoTemplate.updateFirst(
-            Query.query(Criteria.where("_id").`is`(assetId)),
+            Query.query(Criteria.where("_id").`is`(assetId).andOperator(activeGps)),
             update,
             AssetDocument::class.java
         )
