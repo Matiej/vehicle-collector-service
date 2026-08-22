@@ -74,6 +74,39 @@ class AssetController(
     }
 
     @Operation(
+        summary = "Public POST: upload asset without a session",
+        description = "Uploads a new asset not bound to any session (sessionPublicId is null)."
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "201", description = "Asset created"),
+        ApiResponse(responseCode = "400", description = "Bad request"),
+        ApiResponse(responseCode = "500", description = "Internal server error")
+    )
+    @PostMapping("/assets", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @ResponseStatus(HttpStatus.CREATED)
+    fun uploadAssetWithoutSession(
+        @AuthenticationPrincipal jwt: Jwt,
+        @RequestPart("file") filePart: FilePart,
+        @RequestParam("type") type: AssetType
+    ): Mono<AssetResponse> {
+        val ownerId = jwt.subject
+        log.info(
+            "Received POST request '/api/public/assets' ownerId: {}, type: {}, fileName: {}",
+            ownerId,
+            type.name,
+            filePart.filename()
+        )
+        return assetsService.saveAsset(
+            AssetRequest(
+                sessionPublicId = null,
+                filePart = filePart,
+                ownerId = ownerId,
+                assetType = type
+            )
+        )
+    }
+
+    @Operation(
         summary = "Public GET endpoint to return all assets",
         description = "Fetches all available assets for owner"
     )
