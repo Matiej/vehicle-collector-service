@@ -1,5 +1,6 @@
 package com.emat.vehicle_collector_service.api
 
+import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.session.domain.SessionStatus
 import com.emat.vehicle_collector_service.session.infra.SessionDocument
 import org.springframework.http.MediaType
@@ -111,6 +112,48 @@ class SessionControllerIT extends PublicApiSpec {
                 .expectStatus().isCreated()
                 .expectBody()
                 .jsonPath('$.ownerId').isEqualTo(USER_A)
+    }
+
+    def "session assets expose assetPublicId instead of the internal Mongo id"() {
+        given:
+        SessionDocument session = givenSession(USER_A)
+        AssetDocument asset = givenAsset(USER_A, session.sessionPublicId)
+
+        expect:
+        asUser(USER_A).get().uri("/api/public/sessions/${session.sessionPublicId}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.assets.length()').isEqualTo(1)
+                .jsonPath('$.assets[0].assetPublicId').isEqualTo(asset.assetPublicId)
+                .jsonPath('$.assets[0].id').doesNotExist()
+    }
+
+    def "session list cover thumbnail is a servable URL, not a raw storage key"() {
+        given:
+        SessionDocument session = givenSession(USER_A)
+        AssetDocument asset = givenAssetWithThumbnail(USER_A, session.sessionPublicId)
+
+        expect:
+        asUser(USER_A).get().uri("/api/public/sessions")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.content[0].coverThumbnailUrl')
+                .isEqualTo("/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320".toString())
+    }
+
+    def "session list cover thumbnail is null when no asset has a thumbnail yet"() {
+        given:
+        SessionDocument session = givenSession(USER_A)
+        givenAsset(USER_A, session.sessionPublicId)
+
+        expect:
+        asUser(USER_A).get().uri("/api/public/sessions")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.content[0].coverThumbnailUrl').doesNotExist()
     }
 
     def "ownerId smuggled in the create session body is ignored"() {
