@@ -378,6 +378,61 @@ class AssetControllerIT extends PublicApiSpec {
                 .jsonPath('$.content.length()').isEqualTo(1)
     }
 
+    def "upload without a session creates an asset with sessionPublicId null"() {
+        expect:
+        asUser(USER_A).post()
+                .uri("/api/public/assets?type=IMAGE")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .bodyValue(sampleImageMultipart())
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody()
+                .jsonPath('$.ownerId').isEqualTo(USER_A)
+                .jsonPath('$.sessionPublicId').doesNotExist()
+                .jsonPath('$.file.originalFilename').isEqualTo("sample.jpg")
+
+        and:
+        AssetDocument stored = assetRepository.findAll().blockFirst()
+        stored.sessionPublicId == null
+        stored.ownerId == USER_A
+    }
+
+    def "upload without a session appears in the owner assets list"() {
+        given:
+        asUser(USER_A).post()
+                .uri("/api/public/assets?type=IMAGE")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .bodyValue(sampleImageMultipart())
+                .exchange()
+                .expectStatus().isCreated()
+
+        expect:
+        asUser(USER_A).get().uri("/api/public/assets")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.content.length()').isEqualTo(1)
+                .jsonPath('$.content[0].sessionPublicId').doesNotExist()
+    }
+
+    def "upload without a session does not appear under any session"() {
+        given:
+        SessionDocument session = givenSession(USER_A)
+        asUser(USER_A).post()
+                .uri("/api/public/assets?type=IMAGE")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .bodyValue(sampleImageMultipart())
+                .exchange()
+                .expectStatus().isCreated()
+
+        expect:
+        asUser(USER_A).get().uri("/api/public/assets/session/${session.sessionPublicId}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.content.length()').isEqualTo(0)
+    }
+
     def "upload to a session of another user returns 404 and stores nothing"() {
         given:
         SessionDocument foreignSession = givenSession(USER_B)

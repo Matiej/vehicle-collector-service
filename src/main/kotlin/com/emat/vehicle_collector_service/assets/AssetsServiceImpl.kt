@@ -149,9 +149,12 @@ class AssetsServiceImpl(
             .map { ThumbnailInfo(size = it.size, storageKeyPath = it.storageKeyPath) }
     }
 
-    override fun saveAsset(assetRequest: AssetRequest): Mono<AssetResponse> =
-        sessionOwnership.requireOwned(assetRequest.sessionPublicId, assetRequest.ownerId)
-            .then(Mono.defer { storeAsset(assetRequest) })
+    override fun saveAsset(assetRequest: AssetRequest): Mono<AssetResponse> {
+        val guard: Mono<Void> = assetRequest.sessionPublicId
+            ?.let { sessionOwnership.requireOwned(it, assetRequest.ownerId) }
+            ?: Mono.empty()
+        return guard.then(Mono.defer { storeAsset(assetRequest) })
+    }
 
     override fun updateLocation(
         assetPublicId: String,
