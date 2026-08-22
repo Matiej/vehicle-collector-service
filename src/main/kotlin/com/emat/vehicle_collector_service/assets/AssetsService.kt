@@ -24,5 +24,5 @@ interface AssetsService {
     ): Mono<PageResponse<AssetResponse>>
     fun getAllAssetsBySessionPublicIdDescByCreatedAt(sessionPublicId: String): Flux<Asset>
     fun countAllBySessionPublicId(sessionPublicId: String): Mono<Long>
-    fun findLastAssetThumbnail320BySessionPublicId(sessionPublicId: String): Mono<ThumbnailInfo>
+    fun findLastAssetThumbnail320BySessionPublicId(sessionPublicId: String): Mono<String>
 }

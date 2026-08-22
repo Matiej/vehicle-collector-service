@@ -110,17 +110,16 @@ class SessionServiceImpl(
                 .defaultIfEmpty(0L)
                 .zipWith(
                     assetService.findLastAssetThumbnail320BySessionPublicId(session.sessionPublicId)
-                        .map { it.storageKeyPath }
                         .defaultIfEmpty("")
                 )
-                { numberOfAssets, thumb320 ->
+                { numberOfAssets, coverThumbnailUrl ->
                     SessionSummaryResponse(
                         sessionPublicId = session.sessionPublicId,
                         sessionName = session.sessionName,
                         sessionMode = session.sessionMode,
                         ownerId = session.ownerId,
                         assetsCount = numberOfAssets.toInt(),
-                        coverThumbnailUrl = if (thumb320.isEmpty()) null else thumb320,
+                        coverThumbnailUrl = coverThumbnailUrl.ifEmpty { null },
                         sessionStatus = session.status,
                         createdAt = session.createdAt.toString()
                     )
@@ -132,7 +131,7 @@ class SessionServiceImpl(
         assetService.getAllAssetsBySessionPublicIdDescByCreatedAt(sessionDocument.sessionPublicId)
             .map { asset ->
                 SessionAsset(
-                    id = asset.id!!,
+                    assetPublicId = asset.assetPublicId,
                     type = asset.type.name,
                     status = asset.status.name,
                     thumbnailSmallUrl = asset.thumbnails.firstOrNull { it.size == ThumbnailSize.THUMB_320 }

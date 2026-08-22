@@ -139,14 +139,15 @@ class AssetsServiceImpl(
         return assetRepository.countAllBySessionPublicId(sessionPublicId)
     }
 
-    override fun findLastAssetThumbnail320BySessionPublicId(sessionPublicId: String): Mono<ThumbnailInfo> {
+    override fun findLastAssetThumbnail320BySessionPublicId(sessionPublicId: String): Mono<String> {
         return assetRepository.findFirstBySessionPublicIdOrderByCreatedAtDesc(sessionPublicId)
             .flatMap { asset ->
-                val thumb320 = asset.file.thumbnails
-                    .firstOrNull { it.size == ThumbnailSize.THUMB_320 && it.storageKeyPath.isNotBlank() }
-                Mono.justOrEmpty(thumb320)
+                val hasThumb320 = asset.file.thumbnails
+                    .any { it.size == ThumbnailSize.THUMB_320 && it.storageKeyPath.isNotBlank() }
+                Mono.justOrEmpty(
+                    if (hasThumb320) "/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320" else null
+                )
             }
-            .map { ThumbnailInfo(size = it.size, storageKeyPath = it.storageKeyPath) }
     }
 
     override fun saveAsset(assetRequest: AssetRequest): Mono<AssetResponse> {
