@@ -23,7 +23,7 @@ data class AssetDetailResponse(
     val file: AssetDetailFileResponse,
     val thumbnails: List<AssetDetailThumbnailResponse>,
     val capture: AssetDetailCaptureResponse,
-    val curation: AssetDetailCurationResponse,
+    val annotations: AssetDetailAnnotationsResponse,
     val vehicleRecognition: AssetDetailVehicleRecognitionResponse,
     val createdAt: Instant?,
     val updatedAt: Instant?,
@@ -74,7 +74,7 @@ data class AssetDetailCameraResponse(
     val focalLength: Double?
 )
 
-data class AssetDetailCurationResponse(
+data class AssetDetailAnnotationsResponse(
     val title: String?,
     val titleSource: TitleSource?,
     val favorite: Boolean,

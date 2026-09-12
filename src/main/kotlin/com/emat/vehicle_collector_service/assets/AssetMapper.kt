@@ -1,9 +1,9 @@
 package com.emat.vehicle_collector_service.assets
 
 import com.emat.vehicle_collector_service.api.dto.AssetCaptureResponse
+import com.emat.vehicle_collector_service.api.dto.AssetDetailAnnotationsResponse
 import com.emat.vehicle_collector_service.api.dto.AssetDetailCameraResponse
 import com.emat.vehicle_collector_service.api.dto.AssetDetailCaptureResponse
-import com.emat.vehicle_collector_service.api.dto.AssetDetailCurationResponse
 import com.emat.vehicle_collector_service.api.dto.AssetDetailExternalInfoResponse
 import com.emat.vehicle_collector_service.api.dto.AssetDetailFileResponse
 import com.emat.vehicle_collector_service.api.dto.AssetDetailPlaceResponse
@@ -79,7 +79,7 @@ object AssetMapper {
     fun toAssetDetailResponse(assetDocument: AssetDocument): AssetDetailResponse {
         val file = assetDocument.file
         val capture = assetDocument.capture
-        val curation = assetDocument.curation
+        val annotations = assetDocument.annotations
         val vehicleRecognition = assetDocument.vehicleRecognition
 
         return AssetDetailResponse(
@@ -132,12 +132,12 @@ object AssetMapper {
                     )
                 }
             ),
-            curation = AssetDetailCurationResponse(
-                title = curation.title,
-                titleSource = curation.titleSource,
-                favorite = curation.favorite,
-                notes = curation.notes,
-                externalInfo = curation.externalInfo.map {
+            annotations = AssetDetailAnnotationsResponse(
+                title = annotations.title,
+                titleSource = annotations.titleSource,
+                favorite = annotations.favorite,
+                notes = annotations.notes,
+                externalInfo = annotations.externalInfo.map {
                     AssetDetailExternalInfoResponse(
                         type = it.type,
                         label = it.label,
@@ -146,7 +146,7 @@ object AssetMapper {
                         source = it.source
                     )
                 },
-                albumIds = curation.albumIds
+                albumIds = annotations.albumIds
             ),
             vehicleRecognition = AssetDetailVehicleRecognitionResponse(
                 badge = vehicleRecognition.badge,

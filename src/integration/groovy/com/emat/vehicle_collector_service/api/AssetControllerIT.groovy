@@ -148,7 +148,7 @@ class AssetControllerIT extends PublicApiSpec {
                 .isEqualTo("/api/app/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320".toString())
                 .jsonPath('$.thumbnails[0].createdAt').exists()
                 .jsonPath('$.capture.camera').doesNotExist()
-                .jsonPath('$.curation.favorite').isEqualTo(false)
+                .jsonPath('$.annotations.favorite').isEqualTo(false)
                 .jsonPath('$.vehicleRecognition.badge').isEqualTo("RAW")
                 .jsonPath('$.createdAt').exists()
                 .jsonPath('$.version').exists()

@@ -32,7 +32,7 @@ data class AssetDocument(
     val assetType: AssetType,
     val file: FileInfo,
     val capture: CaptureInfo,
-    val curation: CurationInfo = CurationInfo(),
+    val annotations: AnnotationsInfo = AnnotationsInfo(),
     val vehicleRecognition: VehicleRecognition = VehicleRecognition(),
     @CreatedDate
     var createdAt: Instant? = null,

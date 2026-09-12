@@ -157,7 +157,7 @@ class AppAssetController(
 
     @Operation(
         summary = "Public GET: single asset with full details",
-        description = "Fetches everything known about one asset (file, EXIF/capture, camera, curation, vehicle recognition)."
+        description = "Fetches everything known about one asset (file, EXIF/capture, camera, annotations, vehicle recognition)."
     )
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Asset found"),
