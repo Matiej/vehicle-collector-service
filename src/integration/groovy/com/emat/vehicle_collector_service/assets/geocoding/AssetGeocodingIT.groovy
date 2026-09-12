@@ -122,7 +122,7 @@ class AssetGeocodingIT extends PublicApiSpec {
         Sinks.One<ResolvedPlace> result = Sinks.one()
 
         when:
-        asUser(USER_A).put().uri("/api/public/assets/${asset.assetPublicId}/location")
+        asUser(USER_A).put().uri("/api/app/assets/${asset.assetPublicId}/location")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue([lat: WARSAW.lat, lng: WARSAW.lng])
                 .exchange()
@@ -158,7 +158,7 @@ class AssetGeocodingIT extends PublicApiSpec {
         assetGeocodingService.geocodeAndSave(asset.id, asset.assetPublicId, KRAKOW).subscribe()
 
         when:
-        asUser(USER_A).put().uri("/api/public/assets/${asset.assetPublicId}/location")
+        asUser(USER_A).put().uri("/api/app/assets/${asset.assetPublicId}/location")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue([lat: WARSAW.lat, lng: WARSAW.lng])
                 .exchange()
@@ -185,7 +185,7 @@ class AssetGeocodingIT extends PublicApiSpec {
 
         when:
         asUser(USER_A).post()
-                .uri("/api/public/sessions/${session.sessionPublicId}/assets?type=IMAGE")
+                .uri("/api/app/sessions/${session.sessionPublicId}/assets?type=IMAGE")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(sampleImageMultipart())
                 .exchange()

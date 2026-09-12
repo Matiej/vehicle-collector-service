@@ -26,6 +26,7 @@ class AssetGeocodingService(
 
     fun geocodeAndSave(assetId: String, assetPublicId: String, gps: GeoPoint?): Mono<Void> {
         if (!properties.enabled || gps == null) {
+            log.info("Geocoding skipped for asset={}: geocoding is {}, , GPS is {}}", assetPublicId, properties.enabled, gps)
             return Mono.empty()
         }
         return geocoder.reverse(gps)
@@ -49,7 +50,7 @@ class AssetGeocodingService(
                 geocodedAt = Instant.now(),
                 geocodedFrom = gps
             )
-        )
+        ).set("updatedAt", Instant.now())
         val activeGps = Criteria().orOperator(
             Criteria.where("capture.gpsSource").`is`(GpsSource.USER)
                 .and("capture.userGps.lat").`is`(gps.lat)

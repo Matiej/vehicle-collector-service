@@ -32,7 +32,7 @@ data class AssetDocument(
     val assetType: AssetType,
     val file: FileInfo,
     val capture: CaptureInfo,
-    val curation: CurationInfo = CurationInfo(),
+    val annotations: AnnotationsInfo = AnnotationsInfo(),
     val vehicleRecognition: VehicleRecognition = VehicleRecognition(),
     @CreatedDate
     var createdAt: Instant? = null,
@@ -61,7 +61,8 @@ data class FileInfo(
     val thumbnails: List<Thumbnail> = emptyList()
 )
 
-data class Thumbnail(
+data class Thumbnail @JvmOverloads constructor(
     val size: ThumbnailSize,
-    val storageKeyPath: String
+    val storageKeyPath: String,
+    val createdAt: Instant = Instant.now()
 )

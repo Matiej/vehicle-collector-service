@@ -2,7 +2,7 @@ package com.emat.vehicle_collector_service.assets.infra
 
 import com.emat.vehicle_collector_service.assets.domain.TitleSource
 
-data class CurationInfo(
+data class AnnotationsInfo(
     val title: String? = null,
     val titleSource: TitleSource? = null,
     val favorite: Boolean = false,

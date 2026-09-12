@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.emat</groupId>
 	<artifactId>vehicle-collector-service</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.2</version>
 	<name>vehicle-collector-service</name>
 	<description>Collect pictures</description>
 	<url/>

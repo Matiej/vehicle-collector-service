@@ -109,7 +109,7 @@ class AssetMapperTest {
         val response = AssetMapper.toAssetResponse(document)
 
         assertEquals(
-            "/api/public/assets/${document.assetPublicId}/thumbnail?size=THUMB_320",
+            "/api/app/assets/${document.assetPublicId}/thumbnail?size=THUMB_320",
             response.thumbnailSmallUrl
         )
         assertNull(response.thumbnailMediumUrl)

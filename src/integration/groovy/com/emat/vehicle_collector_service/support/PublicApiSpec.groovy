@@ -6,8 +6,8 @@ import com.emat.vehicle_collector_service.assets.domain.AssetType
 import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
+import com.emat.vehicle_collector_service.assets.infra.AnnotationsInfo
 import com.emat.vehicle_collector_service.assets.infra.CaptureInfo
-import com.emat.vehicle_collector_service.assets.infra.CurationInfo
 import com.emat.vehicle_collector_service.assets.infra.FileInfo
 import com.emat.vehicle_collector_service.assets.infra.Thumbnail
 import com.emat.vehicle_collector_service.assets.infra.VehicleRecognition
@@ -122,7 +122,7 @@ abstract public class PublicApiSpec extends Specification {
                                 thumbnails
                         ),
                         capture,
-                        new CurationInfo(),
+                        new AnnotationsInfo(),
                         new VehicleRecognition(),
                         null,
                         null,

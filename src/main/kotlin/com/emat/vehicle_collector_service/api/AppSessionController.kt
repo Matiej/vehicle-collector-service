@@ -20,13 +20,13 @@ import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
 
 @RestController
-@RequestMapping("/api/public/sessions")
+@RequestMapping("/api/app/sessions")
 @Validated
-class SessionController(
+class AppSessionController(
     private val sessionService: SessionService
 ) {
 
-    private val log = LoggerFactory.getLogger(SessionController::class.java)
+    private val log = LoggerFactory.getLogger(AppSessionController::class.java)
 
     @Operation(
         summary = "Public GET endpoint to list all sessions for given owner",
@@ -45,7 +45,7 @@ class SessionController(
     ): Mono<PageResponse<SessionSummaryResponse>> {
         val ownerId = jwt.subject
         log.info(
-            "Received GET request '/api/public/sessions/' for page: {}, size: {} and owner {}",
+            "Received GET request for sessions, page: {}, size: {} and owner {}",
             query.page, query.size, ownerId
         )
         return sessionService.listSessions(ownerId, query.page, query.size, query.sortDir)
@@ -69,7 +69,7 @@ class SessionController(
     ): Mono<SessionResponse> {
         val ownerId = jwt.subject
         log.info(
-            "Received POST request '/api/public/sessions' to create session of the owner {}, mode: {}, device: {}",
+            "Received POST request to create session of the owner {}, mode: {}, device: {}",
             ownerId, createSessionRequest.mode, createSessionRequest.device
         )
         return sessionService.createSession(createSessionRequest, ownerId)
@@ -93,7 +93,7 @@ class SessionController(
         @RequestParam(required = true) sessionStatus: SessionStatus
     ): Mono<SessionResponse> {
         log.info(
-            "Received PUT request '/api/public/sessions/{sessionPublicId}' to change session status session to {}, for sessionPublicId {}",
+            "Received PUT request to change session status to {}, for sessionPublicId {}",
             sessionStatus.name, sessionPublicId
         )
         return sessionService.changeSessionStatus(sessionPublicId, jwt.subject, sessionStatus)
@@ -114,7 +114,7 @@ class SessionController(
         @AuthenticationPrincipal jwt: Jwt,
         @PathVariable sessionPublicId: String
     ): Mono<SessionResponse> {
-        log.info("Received GET request '/api/public/sessions/{sessionPublicId}' for sessionPublicId={}", sessionPublicId)
+        log.info("Received GET request for sessionPublicId={}", sessionPublicId)
         return sessionService.getSessionBySessionPublicId(sessionPublicId, jwt.subject)
     }
 }

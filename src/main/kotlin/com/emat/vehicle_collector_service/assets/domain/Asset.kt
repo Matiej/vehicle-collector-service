@@ -21,5 +21,6 @@ data class GeoPoint(
 
 data class ThumbnailInfo(
     val size: ThumbnailSize,
-    val storageKeyPath: String
+    val storageKeyPath: String,
+    val createdAt: Instant
 )

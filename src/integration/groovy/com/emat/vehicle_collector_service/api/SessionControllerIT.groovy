@@ -14,7 +14,7 @@ class SessionControllerIT extends PublicApiSpec {
         givenSession(USER_B)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/sessions")
+        asUser(USER_A).get().uri("/api/app/sessions")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -33,7 +33,7 @@ class SessionControllerIT extends PublicApiSpec {
         3.times { givenSession(USER_B) }
 
         expect:
-        asUser(USER_A).get().uri("/api/public/sessions?page=1&size=2")
+        asUser(USER_A).get().uri("/api/app/sessions?page=1&size=2")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -45,7 +45,7 @@ class SessionControllerIT extends PublicApiSpec {
 
     def "sessions list rejects size=0 with 400 instead of dividing by zero"() {
         expect:
-        asUser(USER_A).get().uri("/api/public/sessions?size=0")
+        asUser(USER_A).get().uri("/api/app/sessions?size=0")
                 .exchange()
                 .expectStatus().isBadRequest()
     }
@@ -55,7 +55,7 @@ class SessionControllerIT extends PublicApiSpec {
         SessionDocument session = givenSession(USER_A)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/sessions/${session.sessionPublicId}")
+        asUser(USER_A).get().uri("/api/app/sessions/${session.sessionPublicId}")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -67,7 +67,7 @@ class SessionControllerIT extends PublicApiSpec {
         SessionDocument foreignSession = givenSession(USER_B)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/sessions/${foreignSession.sessionPublicId}")
+        asUser(USER_A).get().uri("/api/app/sessions/${foreignSession.sessionPublicId}")
                 .exchange()
                 .expectStatus().isNotFound()
                 .expectBody()
@@ -81,7 +81,7 @@ class SessionControllerIT extends PublicApiSpec {
 
         when:
         asUser(USER_A).put()
-                .uri("/api/public/sessions/${foreignSession.sessionPublicId}?sessionStatus=CLOSED")
+                .uri("/api/app/sessions/${foreignSession.sessionPublicId}?sessionStatus=CLOSED")
                 .exchange()
                 .expectStatus().isNotFound()
 
@@ -96,7 +96,7 @@ class SessionControllerIT extends PublicApiSpec {
 
         expect:
         asUser(USER_A).put()
-                .uri("/api/public/sessions/${session.sessionPublicId}?sessionStatus=CLOSED")
+                .uri("/api/app/sessions/${session.sessionPublicId}?sessionStatus=CLOSED")
                 .exchange()
                 .expectStatus().isCreated()
                 .expectBody()
@@ -105,7 +105,7 @@ class SessionControllerIT extends PublicApiSpec {
 
     def "created session takes its owner from the token"() {
         expect:
-        asUser(USER_A).post().uri("/api/public/sessions")
+        asUser(USER_A).post().uri("/api/app/sessions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue([mode: "BULK", device: "phone", sessionName: "test", clientVersion: "1.0"])
                 .exchange()
@@ -120,7 +120,7 @@ class SessionControllerIT extends PublicApiSpec {
         AssetDocument asset = givenAsset(USER_A, session.sessionPublicId)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/sessions/${session.sessionPublicId}")
+        asUser(USER_A).get().uri("/api/app/sessions/${session.sessionPublicId}")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -135,12 +135,12 @@ class SessionControllerIT extends PublicApiSpec {
         AssetDocument asset = givenAssetWithThumbnail(USER_A, session.sessionPublicId)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/sessions")
+        asUser(USER_A).get().uri("/api/app/sessions")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath('$.content[0].coverThumbnailUrl')
-                .isEqualTo("/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320".toString())
+                .isEqualTo("/api/app/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320".toString())
     }
 
     def "session list cover thumbnail is null when no asset has a thumbnail yet"() {
@@ -149,7 +149,7 @@ class SessionControllerIT extends PublicApiSpec {
         givenAsset(USER_A, session.sessionPublicId)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/sessions")
+        asUser(USER_A).get().uri("/api/app/sessions")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -158,7 +158,7 @@ class SessionControllerIT extends PublicApiSpec {
 
     def "ownerId smuggled in the create session body is ignored"() {
         expect:
-        asUser(USER_A).post().uri("/api/public/sessions")
+        asUser(USER_A).post().uri("/api/app/sessions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue([mode: "BULK", device: "phone", sessionName: "test", clientVersion: "1.0", ownerId: USER_B])
                 .exchange()

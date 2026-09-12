@@ -145,7 +145,7 @@ class AssetsServiceImpl(
                 val hasThumb320 = asset.file.thumbnails
                     .any { it.size == ThumbnailSize.THUMB_320 && it.storageKeyPath.isNotBlank() }
                 Mono.justOrEmpty(
-                    if (hasThumb320) "/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320" else null
+                    if (hasThumb320) "/api/app/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320" else null
                 )
             }
     }

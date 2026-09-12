@@ -1,9 +1,11 @@
 package com.emat.vehicle_collector_service.api
 
+import com.emat.vehicle_collector_service.api.dto.AssetDetailResponse
 import com.emat.vehicle_collector_service.api.dto.AssetResponse
 import com.emat.vehicle_collector_service.api.dto.AssetsOwnerQuery
 import com.emat.vehicle_collector_service.api.dto.PageResponse
 import com.emat.vehicle_collector_service.api.dto.UpdateLocationRequest
+import com.emat.vehicle_collector_service.assets.AssetMapper
 import com.emat.vehicle_collector_service.assets.AssetsService
 import com.emat.vehicle_collector_service.assets.domain.AssetRequest
 import com.emat.vehicle_collector_service.assets.domain.AssetType
@@ -30,13 +32,13 @@ import reactor.core.publisher.Mono
 import java.nio.file.Path
 
 @RestController
-@RequestMapping("/api/public")
+@RequestMapping("/api/app")
 @Validated
-class AssetController(
+class AppAssetController(
     private val assetsService: AssetsService,
     private val appData: AppData
 ) {
-    private val log = LoggerFactory.getLogger(AssetController::class.java)
+    private val log = LoggerFactory.getLogger(AppAssetController::class.java)
 
     @Operation(
         summary = "Public POST: upload asset to session",
@@ -57,7 +59,7 @@ class AssetController(
     ): Mono<AssetResponse> {
         val ownerId = jwt.subject
         log.info(
-            "Received POST request '/api/public/sessions/{sessionPublicId}/assets' sessionPublicId: {}. ownerId: {}, type: {}, fileName: {}",
+            "Received POST request to upload asset to session, sessionPublicId: {}. ownerId: {}, type: {}, fileName: {}",
             sessionPublicId,
             ownerId,
             type.name,
@@ -91,7 +93,7 @@ class AssetController(
     ): Mono<AssetResponse> {
         val ownerId = jwt.subject
         log.info(
-            "Received POST request '/api/public/assets' ownerId: {}, type: {}, fileName: {}",
+            "Received POST request to upload asset without a session, ownerId: {}, type: {}, fileName: {}",
             ownerId,
             type.name,
             filePart.filename()
@@ -123,7 +125,7 @@ class AssetController(
     ): Mono<PageResponse<AssetResponse>> {
         val ownerId = jwt.subject
         log.info(
-            "Received GET '/api/public/assets' ownerId={}, type={}, page={}, size={}, sort={}",
+            "Received GET request for all assets, ownerId={}, type={}, page={}, size={}, sort={}",
             ownerId, query.type, query.page, query.size, query.sortDir
         )
         return assetsService.getAllAssetsByOwnerId(ownerId, query)
@@ -147,11 +149,27 @@ class AssetController(
         @ModelAttribute @Valid query: AssetsOwnerQuery,
     ): Mono<PageResponse<AssetResponse>> {
         log.info(
-            "Received GET '/api/public/assets/session/{sessionId}' sessionPublicId={}, type={}, page={}, size={}, sort={}",
+            "Received GET request for assets of session, sessionPublicId={}, type={}, page={}, size={}, sort={}",
             sessionPublicId, query.type, query.page, query.size, query.sortDir
         )
         return assetsService.getAllAssetsBySessionPublicId(sessionPublicId, jwt.subject, query)
     }
+
+    @Operation(
+        summary = "Public GET: single asset with full details",
+        description = "Fetches everything known about one asset (file, EXIF/capture, camera, annotations, vehicle recognition)."
+    )
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Asset found"),
+        ApiResponse(responseCode = "404", description = "Asset not found for owner")
+    )
+    @GetMapping("/assets/{assetPublicId}")
+    fun getAsset(
+        @AuthenticationPrincipal jwt: Jwt,
+        @PathVariable assetPublicId: String
+    ): Mono<AssetDetailResponse> =
+        assetsService.findByPublicId(assetPublicId, jwt.subject)
+            .map { AssetMapper.toAssetDetailResponse(it) }
 
     @PutMapping("/assets/{assetPublicId}/location")
     fun updateLocation(
