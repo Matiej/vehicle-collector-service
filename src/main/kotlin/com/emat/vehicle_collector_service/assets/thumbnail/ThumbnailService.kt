@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import java.nio.file.Path
+import java.time.Instant
 
 @Service
 class ThumbnailService(
@@ -29,13 +30,14 @@ class ThumbnailService(
         return Mono.fromCallable {
             val assetsDir = Path.of(appData.getAssetsDir())
             val originalPath = assetsDir.resolve(originalStorageKeyPath)
+            val generatedAt = Instant.now()
 
             ThumbnailSize.entries.map { size ->
                 val relativePath = "thumbnails/${assetPublicId}_${size.name.lowercase()}.jpg"
                 val outputPath = assetsDir.resolve(relativePath)
                 generator.generate(originalPath, outputPath, size.maxDimension)
                 log.debug("Generated {} for asset {}: {}", size.name, assetPublicId, outputPath)
-                Thumbnail(size = size, storageKeyPath = relativePath)
+                Thumbnail(size = size, storageKeyPath = relativePath, createdAt = generatedAt)
             }
         }
             .subscribeOn(thumbnailScheduler)
@@ -53,6 +55,7 @@ class ThumbnailService(
             .set("file.thumbnails", thumbnails)
             .set("file.status", AssetStatus.THUMBS_READY)
             .unset("file.failureReason")
+            .set("updatedAt", Instant.now())
         return update(assetId, update)
     }
 
@@ -60,6 +63,7 @@ class ThumbnailService(
         val update = Update()
             .set("file.status", AssetStatus.FAILED)
             .set("file.failureReason", THUMBNAIL_FAILURE_REASON)
+            .set("updatedAt", Instant.now())
         return update(assetId, update)
             .doOnError { e -> log.error("Cannot mark asset={} as FAILED: {}", assetId, e.message, e) }
             .onErrorResume { Mono.empty() }

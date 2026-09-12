@@ -23,7 +23,7 @@ class AssetControllerIT extends PublicApiSpec {
         givenAsset(USER_B, null)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets")
+        asUser(USER_A).get().uri("/api/app/assets")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -38,7 +38,7 @@ class AssetControllerIT extends PublicApiSpec {
         AssetDocument asset = givenAsset(USER_A, session.sessionPublicId)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets/session/${session.sessionPublicId}")
+        asUser(USER_A).get().uri("/api/app/assets/session/${session.sessionPublicId}")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -52,7 +52,7 @@ class AssetControllerIT extends PublicApiSpec {
         givenAsset(USER_B, foreignSession.sessionPublicId)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets/session/${foreignSession.sessionPublicId}")
+        asUser(USER_A).get().uri("/api/app/assets/session/${foreignSession.sessionPublicId}")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -67,7 +67,7 @@ class AssetControllerIT extends PublicApiSpec {
         3.times { givenAsset(USER_B, null) }
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets?page=${page}&size=2")
+        asUser(USER_A).get().uri("/api/app/assets?page=${page}&size=2")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -91,7 +91,7 @@ class AssetControllerIT extends PublicApiSpec {
         givenAsset(USER_A, null)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets/session/${session.sessionPublicId}?page=0&size=2")
+        asUser(USER_A).get().uri("/api/app/assets/session/${session.sessionPublicId}?page=0&size=2")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -104,14 +104,14 @@ class AssetControllerIT extends PublicApiSpec {
 
     def "assets list rejects size=0 with 400 instead of dividing by zero"() {
         expect:
-        asUser(USER_A).get().uri("/api/public/assets?size=0")
+        asUser(USER_A).get().uri("/api/app/assets?size=0")
                 .exchange()
                 .expectStatus().isBadRequest()
     }
 
     def "assets list rejects a negative page with 400"() {
         expect:
-        asUser(USER_A).get().uri("/api/public/assets?page=-1")
+        asUser(USER_A).get().uri("/api/app/assets?page=-1")
                 .exchange()
                 .expectStatus().isBadRequest()
     }
@@ -121,7 +121,7 @@ class AssetControllerIT extends PublicApiSpec {
         3.times { givenAsset(USER_A, null) }
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets?type=AUDIO")
+        asUser(USER_A).get().uri("/api/app/assets?type=AUDIO")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -129,12 +129,47 @@ class AssetControllerIT extends PublicApiSpec {
                 .jsonPath('$.totalElements').isEqualTo(0)
     }
 
+    def "single asset endpoint returns full details for the owner"() {
+        given:
+        AssetDocument asset = givenAssetWithThumbnail(USER_A, null)
+
+        expect:
+        asUser(USER_A).get().uri("/api/app/assets/${asset.assetPublicId}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.assetPublicId').isEqualTo(asset.assetPublicId)
+                .jsonPath('$.ownerId').isEqualTo(USER_A)
+                .jsonPath('$.status').isEqualTo("UPLOADED")
+                .jsonPath('$.file.sha256').isEqualTo(asset.file.sha256)
+                .jsonPath('$.thumbnails.length()').isEqualTo(1)
+                .jsonPath('$.thumbnails[0].size').isEqualTo("THUMB_320")
+                .jsonPath('$.thumbnails[0].url')
+                .isEqualTo("/api/app/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320".toString())
+                .jsonPath('$.thumbnails[0].createdAt').exists()
+                .jsonPath('$.capture.camera').doesNotExist()
+                .jsonPath('$.curation.favorite').isEqualTo(false)
+                .jsonPath('$.vehicleRecognition.badge').isEqualTo("RAW")
+                .jsonPath('$.createdAt').exists()
+                .jsonPath('$.version').exists()
+    }
+
+    def "single asset endpoint returns 404 for another users asset"() {
+        given:
+        AssetDocument foreignAsset = givenAsset(USER_B, null)
+
+        expect:
+        asUser(USER_A).get().uri("/api/app/assets/${foreignAsset.assetPublicId}")
+                .exchange()
+                .expectStatus().isNotFound()
+    }
+
     def "thumbnail of own asset is served and is never publicly cacheable"() {
         given:
         AssetDocument asset = givenAssetWithThumbnail(USER_A, null)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320")
+        asUser(USER_A).get().uri("/api/app/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType(MediaType.IMAGE_JPEG)
@@ -146,7 +181,7 @@ class AssetControllerIT extends PublicApiSpec {
         AssetDocument foreignAsset = givenAssetWithThumbnail(USER_B, null)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets/${foreignAsset.assetPublicId}/thumbnail?size=THUMB_320")
+        asUser(USER_A).get().uri("/api/app/assets/${foreignAsset.assetPublicId}/thumbnail?size=THUMB_320")
                 .exchange()
                 .expectStatus().isNotFound()
     }
@@ -157,7 +192,7 @@ class AssetControllerIT extends PublicApiSpec {
 
         expect:
         asUser(USER_A).post()
-                .uri("/api/public/sessions/${session.sessionPublicId}/assets?type=IMAGE")
+                .uri("/api/app/sessions/${session.sessionPublicId}/assets?type=IMAGE")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(sampleImageMultipart())
                 .exchange()
@@ -189,7 +224,7 @@ class AssetControllerIT extends PublicApiSpec {
         )
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets")
+        asUser(USER_A).get().uri("/api/app/assets")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -211,7 +246,7 @@ class AssetControllerIT extends PublicApiSpec {
         )
 
         expect:
-        asUser(USER_A).put().uri("/api/public/assets/${asset.assetPublicId}/location")
+        asUser(USER_A).put().uri("/api/app/assets/${asset.assetPublicId}/location")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue([lat: 52.2297d, lng: 21.0122d])
                 .exchange()
@@ -243,7 +278,7 @@ class AssetControllerIT extends PublicApiSpec {
         )
 
         expect:
-        asUser(USER_A).delete().uri("/api/public/assets/${asset.assetPublicId}/location")
+        asUser(USER_A).delete().uri("/api/app/assets/${asset.assetPublicId}/location")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -271,7 +306,7 @@ class AssetControllerIT extends PublicApiSpec {
         )
 
         expect:
-        asUser(USER_A).delete().uri("/api/public/assets/${asset.assetPublicId}/location")
+        asUser(USER_A).delete().uri("/api/app/assets/${asset.assetPublicId}/location")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -291,14 +326,14 @@ class AssetControllerIT extends PublicApiSpec {
         AssetDocument foreignAsset = givenAsset(USER_B, null)
 
         expect:
-        asUser(USER_A).put().uri("/api/public/assets/${foreignAsset.assetPublicId}/location")
+        asUser(USER_A).put().uri("/api/app/assets/${foreignAsset.assetPublicId}/location")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue([lat: 52.2297d, lng: 21.0122d])
                 .exchange()
                 .expectStatus().isNotFound()
 
         and:
-        asUser(USER_A).delete().uri("/api/public/assets/${foreignAsset.assetPublicId}/location")
+        asUser(USER_A).delete().uri("/api/app/assets/${foreignAsset.assetPublicId}/location")
                 .exchange()
                 .expectStatus().isNotFound()
     }
@@ -308,7 +343,7 @@ class AssetControllerIT extends PublicApiSpec {
         AssetDocument asset = givenAsset(USER_A, null)
 
         expect:
-        asUser(USER_A).put().uri("/api/public/assets/${asset.assetPublicId}/location")
+        asUser(USER_A).put().uri("/api/app/assets/${asset.assetPublicId}/location")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(body)
                 .exchange()
@@ -331,7 +366,7 @@ class AssetControllerIT extends PublicApiSpec {
 
         when:
         asUser(USER_A).post()
-                .uri("/api/public/sessions/${session.sessionPublicId}/assets?type=IMAGE")
+                .uri("/api/app/sessions/${session.sessionPublicId}/assets?type=IMAGE")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(sampleImageMultipart())
                 .exchange()
@@ -353,7 +388,7 @@ class AssetControllerIT extends PublicApiSpec {
 
         when:
         asUser(USER_A).post()
-                .uri("/api/public/sessions/${session.sessionPublicId}/assets?type=AUDIO")
+                .uri("/api/app/sessions/${session.sessionPublicId}/assets?type=AUDIO")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(sampleAudioMultipart())
                 .exchange()
@@ -371,7 +406,7 @@ class AssetControllerIT extends PublicApiSpec {
         givenAsset(USER_A, null)
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets?status=WHATEVER")
+        asUser(USER_A).get().uri("/api/app/assets?status=WHATEVER")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -381,7 +416,7 @@ class AssetControllerIT extends PublicApiSpec {
     def "upload without a session creates an asset with sessionPublicId null"() {
         expect:
         asUser(USER_A).post()
-                .uri("/api/public/assets?type=IMAGE")
+                .uri("/api/app/assets?type=IMAGE")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(sampleImageMultipart())
                 .exchange()
@@ -400,14 +435,14 @@ class AssetControllerIT extends PublicApiSpec {
     def "upload without a session appears in the owner assets list"() {
         given:
         asUser(USER_A).post()
-                .uri("/api/public/assets?type=IMAGE")
+                .uri("/api/app/assets?type=IMAGE")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(sampleImageMultipart())
                 .exchange()
                 .expectStatus().isCreated()
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets")
+        asUser(USER_A).get().uri("/api/app/assets")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -419,14 +454,14 @@ class AssetControllerIT extends PublicApiSpec {
         given:
         SessionDocument session = givenSession(USER_A)
         asUser(USER_A).post()
-                .uri("/api/public/assets?type=IMAGE")
+                .uri("/api/app/assets?type=IMAGE")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(sampleImageMultipart())
                 .exchange()
                 .expectStatus().isCreated()
 
         expect:
-        asUser(USER_A).get().uri("/api/public/assets/session/${session.sessionPublicId}")
+        asUser(USER_A).get().uri("/api/app/assets/session/${session.sessionPublicId}")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -439,7 +474,7 @@ class AssetControllerIT extends PublicApiSpec {
 
         when:
         asUser(USER_A).post()
-                .uri("/api/public/sessions/${foreignSession.sessionPublicId}/assets?type=IMAGE")
+                .uri("/api/app/sessions/${foreignSession.sessionPublicId}/assets?type=IMAGE")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .bodyValue(sampleImageMultipart())
                 .exchange()

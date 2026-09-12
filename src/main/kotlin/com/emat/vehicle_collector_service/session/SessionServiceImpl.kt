@@ -135,9 +135,9 @@ class SessionServiceImpl(
                     type = asset.type.name,
                     status = asset.status.name,
                     thumbnailSmallUrl = asset.thumbnails.firstOrNull { it.size == ThumbnailSize.THUMB_320 }
-                        ?.let { "/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320" },
+                        ?.let { "/api/app/assets/${asset.assetPublicId}/thumbnail?size=THUMB_320" },
                     thumbnailMediumUrl = asset.thumbnails.firstOrNull { it.size == ThumbnailSize.THUMB_640 }
-                        ?.let { "/api/public/assets/${asset.assetPublicId}/thumbnail?size=THUMB_640" }
+                        ?.let { "/api/app/assets/${asset.assetPublicId}/thumbnail?size=THUMB_640" }
                 )
             }
             .collectList()

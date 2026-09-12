@@ -61,7 +61,8 @@ data class FileInfo(
     val thumbnails: List<Thumbnail> = emptyList()
 )
 
-data class Thumbnail(
+data class Thumbnail @JvmOverloads constructor(
     val size: ThumbnailSize,
-    val storageKeyPath: String
+    val storageKeyPath: String,
+    val createdAt: Instant = Instant.now()
 )
