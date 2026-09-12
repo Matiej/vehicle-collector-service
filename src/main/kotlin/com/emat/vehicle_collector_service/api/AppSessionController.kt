@@ -20,13 +20,13 @@ import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
 
 @RestController
-@RequestMapping(value = ["/api/app/sessions", "/api/web/sessions"])
+@RequestMapping("/api/app/sessions")
 @Validated
-class SessionController(
+class AppSessionController(
     private val sessionService: SessionService
 ) {
 
-    private val log = LoggerFactory.getLogger(SessionController::class.java)
+    private val log = LoggerFactory.getLogger(AppSessionController::class.java)
 
     @Operation(
         summary = "Public GET endpoint to list all sessions for given owner",

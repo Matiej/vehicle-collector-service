@@ -30,7 +30,7 @@ class SecurityConfiguration(
                     .pathMatchers("/actuator/health/**").permitAll()
                     .apply { configureSwagger(this) }
                     .pathMatchers("/api/admin/**").hasAnyRole("TECH_ADMIN", "ADMIN")
-                    .pathMatchers("/api/app/**", "/api/web/**").hasAnyRole("ADMIN", "TECH_ADMIN", "REGULAR_USER")
+                    .pathMatchers("/api/app/**").hasAnyRole("ADMIN", "TECH_ADMIN", "REGULAR_USER")
                     .pathMatchers("/api/**").hasAnyRole("ADMIN", "TECH_ADMIN")
                     .anyExchange().authenticated()
             }

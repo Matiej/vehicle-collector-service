@@ -32,13 +32,13 @@ import reactor.core.publisher.Mono
 import java.nio.file.Path
 
 @RestController
-@RequestMapping(value = ["/api/app", "/api/web"])
+@RequestMapping("/api/app")
 @Validated
-class AssetController(
+class AppAssetController(
     private val assetsService: AssetsService,
     private val appData: AppData
 ) {
-    private val log = LoggerFactory.getLogger(AssetController::class.java)
+    private val log = LoggerFactory.getLogger(AppAssetController::class.java)
 
     @Operation(
         summary = "Public POST: upload asset to session",
