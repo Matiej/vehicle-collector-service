@@ -32,7 +32,7 @@ app:
     enabled: true
     provider-url: https://nominatim.openstreetmap.org/reverse
     user-agent: "vehicle-collector-service/@project.version@"
-    language: pl
+    language: en
     rate-limit-per-second: 1
     cache-precision: 3
     timeout-ms: 5000
