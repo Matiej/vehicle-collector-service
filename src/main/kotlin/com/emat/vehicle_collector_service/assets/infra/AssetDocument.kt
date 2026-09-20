@@ -18,7 +18,19 @@ import java.time.Instant
     value = [
         CompoundIndex(name = "owner_created_at", def = "{'ownerId': 1, 'createdAt': -1}"),
         CompoundIndex(name = "file_sha256", def = "{'file.sha256': 1}"),
-        CompoundIndex(name = "capture_taken_at", def = "{'capture.takenAt': -1}")
+        CompoundIndex(name = "capture_taken_at", def = "{'capture.takenAt': -1}"),
+        CompoundIndex(
+            name = "owner_type_badge_created_at",
+            def = "{'ownerId': 1, 'assetType': 1, 'vehicleRecognition.badge': 1, 'createdAt': -1}"
+        ),
+        CompoundIndex(
+            name = "owner_type_session_created_at",
+            def = "{'ownerId': 1, 'assetType': 1, 'sessionPublicId': 1, 'createdAt': -1}"
+        ),
+        CompoundIndex(
+            name = "owner_type_favorite_created_at",
+            def = "{'ownerId': 1, 'assetType': 1, 'annotations.favorite': 1, 'createdAt': -1}"
+        )
     ]
 )
 data class AssetDocument(

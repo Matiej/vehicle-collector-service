@@ -29,6 +29,11 @@ class AppData {
     private lateinit var swaggerTokenUrl: String
     @Value("\${app.security.swagger-url:}")
     private lateinit var swaggerUrl: String
+    @Value("\${app.security.web-panel-permit-all:false}")
+    private var webPanelPermitAll: Boolean = false
+
+    @Value("\${app.web.owner-filter:true}")
+    private var webOwnerFilterEnabled: Boolean = true
 
     private fun now(): LocalDateTime {
         return LocalDateTime.now(clock)
@@ -57,4 +62,6 @@ class AppData {
     fun isSwaggerPublic(): Boolean = swaggerPublic
     fun getSwaggerTokenUrl(): String = swaggerTokenUrl
     fun getSwaggerUrl(): String = swaggerUrl
+    fun isWebPanelPermitAll(): Boolean = webPanelPermitAll
+    fun isWebOwnerFilterEnabled(): Boolean = webOwnerFilterEnabled
 }
