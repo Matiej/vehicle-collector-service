@@ -67,7 +67,7 @@ class PhotoWebController(
     @GetMapping("/assets/{assetPublicId}/preview")
     fun getPreview(@PathVariable assetPublicId: String): Mono<ResponseEntity<Resource>> =
         photoQueryService.findAssetForThumbnail(assetPublicId)
-            .map { asset -> thumbnailFileResolver.serve(asset, ThumbnailSize.THUMB_640) }
+            .map { asset -> thumbnailFileResolver.servePreview(asset) }
 
     companion object {
         private const val LOCAL_OWNER_PLACEHOLDER = "local-web-owner"

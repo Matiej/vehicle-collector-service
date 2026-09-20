@@ -1,10 +1,6 @@
 package com.emat.vehicle_collector_service.api.web.dto
 
-import com.emat.vehicle_collector_service.assets.domain.AnalysisStatus
 import com.emat.vehicle_collector_service.assets.domain.RecognitionBadge
-import com.emat.vehicle_collector_service.assets.domain.SuggestionStatus
-import com.emat.vehicle_collector_service.assets.domain.VectorStatus
-import com.emat.vehicle_collector_service.assets.domain.VerificationStatus
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.Instant
 
@@ -33,15 +29,23 @@ data class AlbumRefDto(
 )
 
 data class RecognitionDto(
-    val vectorStatus: VectorStatus,
-    val analysisStatus: AnalysisStatus,
-    val suggestionStatus: SuggestionStatus,
-    val verificationStatus: VerificationStatus,
+    val vectorStatus: VectorStatusDto,
+    val analysisStatus: AnalysisStatusDto,
+    val suggestionStatus: SuggestionStatusDto,
+    val verificationStatus: VerificationStatusDto,
     val errorMessage: String?,
     val bestCandidate: CandidateDto?,
     val candidates: List<CandidateDto>,
     val metaData: Map<String, Any>
 )
+
+enum class VectorStatusDto { PENDING, VECTORIZED, FAILED }
+
+enum class AnalysisStatusDto { RECEIVED, PROCESSING, DONE, FAILED }
+
+enum class SuggestionStatusDto { NONE, UNKNOWN, SUGGESTED }
+
+enum class VerificationStatusDto { NONE, PENDING_REVIEW, VERIFIED }
 
 data class CandidateDto(
     val source: String?,

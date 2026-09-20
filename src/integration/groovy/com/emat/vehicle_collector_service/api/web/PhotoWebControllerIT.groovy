@@ -1,12 +1,17 @@
 package com.emat.vehicle_collector_service.api.web
 
+import com.emat.vehicle_collector_service.assets.domain.AnalysisStatus
 import com.emat.vehicle_collector_service.assets.domain.GeoPoint
 import com.emat.vehicle_collector_service.assets.domain.GpsSource
 import com.emat.vehicle_collector_service.assets.domain.RecognitionBadge
+import com.emat.vehicle_collector_service.assets.domain.SuggestionStatus
 import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
+import com.emat.vehicle_collector_service.assets.domain.VectorStatus
+import com.emat.vehicle_collector_service.assets.domain.VerificationStatus
 import com.emat.vehicle_collector_service.assets.infra.AnnotationsInfo
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.CaptureInfo
+import com.emat.vehicle_collector_service.assets.infra.ExternalInfo
 import com.emat.vehicle_collector_service.assets.infra.RagStatus
 import com.emat.vehicle_collector_service.assets.infra.RagSync
 import com.emat.vehicle_collector_service.assets.infra.VehicleCandidate
@@ -376,7 +381,35 @@ class PhotoWebControllerIT extends PublicApiSpec {
                 .expectHeader().valueEquals("Cache-Control", "private, max-age=31536000, immutable")
     }
 
-    def "preview for a photo without a ready 640 thumbnail returns 404"() {
+    def "preview falls back to the original when the 640 thumbnail is not ready yet"() {
+        given:
+        AssetDocument asset = givenAssetWithOriginalFile(USER_A, null, mimeType)
+
+        expect:
+        webTestClient.get().uri("/api/web/assets/${asset.assetPublicId}/preview")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(expectedContentType)
+                // not immutable: the same URL starts serving the thumbnail once it is generated
+                .expectHeader().valueEquals("Cache-Control", "private, max-age=0, must-revalidate")
+
+        where:
+        mimeType     || expectedContentType
+        "image/jpeg" || "image/jpeg"
+        "image/png"  || "image/png"
+    }
+
+    def "preview of a HEIC without a thumbnail returns 404, the browser could not render it anyway"() {
+        given:
+        AssetDocument asset = givenAssetWithOriginalFile(USER_A, null, "image/heic")
+
+        expect:
+        webTestClient.get().uri("/api/web/assets/${asset.assetPublicId}/preview")
+                .exchange()
+                .expectStatus().isNotFound()
+    }
+
+    def "preview returns 404 when neither the thumbnail nor the original file is on disk"() {
         given:
         AssetDocument asset = givenAsset(USER_A, null)
 
@@ -384,6 +417,145 @@ class PhotoWebControllerIT extends PublicApiSpec {
         webTestClient.get().uri("/api/web/assets/${asset.assetPublicId}/preview")
                 .exchange()
                 .expectStatus().isNotFound()
+    }
+
+    def "detail sends recognition axes as frozen-contract values, never the domain-only ones"() {
+        given:
+        AssetDocument asset = givenAsset(USER_A, null)
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${asset.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.recognition.vectorStatus').isEqualTo("PENDING")
+                .jsonPath('$.recognition.analysisStatus').isEqualTo("RECEIVED")
+                .jsonPath('$.recognition.suggestionStatus').isEqualTo("NONE")
+                .jsonPath('$.recognition.verificationStatus').isEqualTo("NONE")
+    }
+
+    def "detail of an ERROR photo sends bestCandidate null and keeps the whole history"() {
+        given:
+        VehicleCandidate stale = candidate(5L, "Ford", 0.90d, true)
+        VehicleCandidate alsoStale = candidate(7L, "Opel", 0.71d, false)
+        AssetDocument asset = givenAsset(
+                USER_A, null, [], new CaptureInfo(), new AnnotationsInfo(),
+                new VehicleRecognition(
+                        RecognitionBadge.ERROR,
+                        new RagStatus(VectorStatus.FAILED, AnalysisStatus.NONE, SuggestionStatus.NONE, VerificationStatus.UNVERIFIED),
+                        "VectorError: boom",
+                        null,
+                        [stale, alsoStale],
+                        [:],
+                        new RagSync()
+                )
+        )
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${asset.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.recognition.bestCandidate').doesNotExist()
+                .jsonPath('$.recognition.candidates.length()').isEqualTo(2)
+                .jsonPath('$.recognition.errorMessage').isEqualTo("VectorError: boom")
+                .jsonPath('$.recognition.vectorStatus').isEqualTo("FAILED")
+    }
+
+    def "detail of an audio asset returns 404, the endpoint serves photos only"() {
+        given:
+        AssetDocument audio = givenAudioAsset(USER_A)
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${audio.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isNotFound()
+    }
+
+    def "session hasAudio is true when the session actually holds an audio asset"() {
+        given:
+        SessionDocument session = givenSession(USER_A)
+        AssetDocument photo = givenAsset(USER_A, session.sessionPublicId)
+        givenAudioAsset(USER_A, session.sessionPublicId)
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${photo.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.session.hasAudio').isEqualTo(true)
+    }
+
+    def "session hasAudio is false when the session holds photos only"() {
+        given:
+        SessionDocument session = givenSession(USER_A)
+        AssetDocument photo = givenAsset(USER_A, session.sessionPublicId)
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${photo.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.session.hasAudio').isEqualTo(false)
+    }
+
+    def "detail reports the user-corrected location, not the stale EXIF point"() {
+        given:
+        AssetDocument asset = givenAsset(
+                USER_A, null, [],
+                new CaptureInfo(
+                        null,
+                        new GeoPoint(50.0614d, 19.9366d),
+                        new GeoPoint(35.8989055d, 14.4936972d),
+                        GpsSource.USER,
+                        null,
+                        null
+                ),
+                new AnnotationsInfo(), new VehicleRecognition()
+        )
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${asset.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.exif.gps.lat').isEqualTo(35.8989055d)
+                .jsonPath('$.exif.gps.lon').isEqualTo(14.4936972d)
+    }
+
+    def "detail never leaks the name of a session owned by somebody else"() {
+        given:
+        SessionDocument foreignSession = givenSession(USER_B)
+        AssetDocument asset = givenAsset(USER_A, foreignSession.sessionPublicId)
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${asset.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.session').doesNotExist()
+    }
+
+    def "detail drops externalInfo entries without a url"() {
+        given:
+        AssetDocument asset = givenAsset(
+                USER_A, null, [], new CaptureInfo(),
+                new AnnotationsInfo(null, null, false, "Plate CAA-247", [
+                        new ExternalInfo("link", "Ford Escort", "https://en.wikipedia.org/wiki/Ford_Escort", null, "wikipedia"),
+                        new ExternalInfo("note", "Owner said Mk3", null, "numbers-matching", null)
+                ], [])
+        )
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${asset.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.notes').isEqualTo("Plate CAA-247")
+                .jsonPath('$.externalInfo.length()').isEqualTo(1)
+                .jsonPath('$.externalInfo[0].source').isEqualTo("wikipedia")
+                .jsonPath('$.externalInfo[0].title').isEqualTo("Ford Escort")
+                .jsonPath('$.externalInfo[0].url').isEqualTo("https://en.wikipedia.org/wiki/Ford_Escort")
     }
 
     private static VehicleRecognition recognitionWithBadge(RecognitionBadge badge) {

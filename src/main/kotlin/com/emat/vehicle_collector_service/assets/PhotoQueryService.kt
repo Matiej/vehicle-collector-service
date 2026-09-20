@@ -59,7 +59,10 @@ class PhotoQueryService(
             .switchIfEmpty(Mono.error(ResourceNotFoundException("Photo not found: $assetPublicId")))
 
     fun getPhotoDetail(ownerId: String, assetPublicId: String): Mono<PhotoDetailDto> {
-        val criteria = mutableListOf(Criteria.where("assetPublicId").`is`(assetPublicId))
+        val criteria = mutableListOf(
+            Criteria.where("assetPublicId").`is`(assetPublicId),
+            Criteria.where("assetType").`is`(AssetType.IMAGE)
+        )
         if (appData.isWebOwnerFilterEnabled()) {
             criteria += Criteria.where("ownerId").`is`(ownerId)
         }
@@ -68,16 +71,25 @@ class PhotoQueryService(
         return template.findOne(query, AssetDocument::class.java)
             .switchIfEmpty(Mono.error(ResourceNotFoundException("Photo not found: $assetPublicId")))
             .flatMap { asset ->
-                resolveSessionRef(asset.sessionPublicId)
+                resolveSessionRef(asset.sessionPublicId, asset.ownerId)
                     .map { session -> PhotoWebMapper.toDetail(asset, session) }
                     .switchIfEmpty(Mono.fromSupplier { PhotoWebMapper.toDetail(asset, null) })
             }
     }
 
-    private fun resolveSessionRef(sessionPublicId: String?): Mono<SessionRefDto> {
+    private fun resolveSessionRef(sessionPublicId: String?, ownerId: String): Mono<SessionRefDto> {
         if (sessionPublicId == null) return Mono.empty()
-        return sessionRepository.findBySessionPublicId(sessionPublicId)
-            .map { SessionRefDto(publicId = it.sessionPublicId, name = it.sessionName ?: it.sessionPublicId, hasAudio = false) }
+        return sessionRepository.findBySessionPublicIdAndOwnerId(sessionPublicId, ownerId)
+            .flatMap { session ->
+                assetRepository.existsBySessionPublicIdAndAssetType(sessionPublicId, AssetType.AUDIO)
+                    .map { hasAudio ->
+                        SessionRefDto(
+                            publicId = session.sessionPublicId,
+                            name = session.sessionName ?: session.sessionPublicId,
+                            hasAudio = hasAudio
+                        )
+                    }
+            }
     }
 
     private fun buildCriteria(ownerId: String, query: PhotoListQuery): List<Criteria> {
