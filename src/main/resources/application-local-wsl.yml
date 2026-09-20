@@ -25,6 +25,9 @@ app:
   security:
     swagger-public: true
     swagger-url: http://localhost:8080
+    web-panel-permit-all: true
+  web:
+    owner-filter: false
 
 security:
   cors:

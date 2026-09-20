@@ -3,6 +3,8 @@ package com.emat.vehicle_collector_service.configuration
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.Ordered
+import org.springframework.core.annotation.Order
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.core.GrantedAuthority
@@ -11,6 +13,7 @@ import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter
 import org.springframework.security.web.server.SecurityWebFilterChain
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers
 
 @Configuration
 @EnableWebFluxSecurity
@@ -22,6 +25,22 @@ class SecurityConfiguration(
     private val swaggerPublic = false
 
     @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    fun webPanelSecurityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
+        http.securityMatcher(ServerWebExchangeMatchers.pathMatchers("/api/web/**"))
+            .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .authorizeExchange { exchanges ->
+                if (appData.isWebPanelPermitAll()) {
+                    exchanges.anyExchange().permitAll()
+                } else {
+                    exchanges.anyExchange().authenticated()
+                }
+            }
+        return http.build()
+    }
+
+    @Bean
+    @Order(Ordered.LOWEST_PRECEDENCE)
     fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         http.csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange { exchanges ->

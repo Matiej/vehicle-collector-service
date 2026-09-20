@@ -42,6 +42,9 @@ app:
   security:
     swagger-public: false
     swagger-url: https://api.lan
+    web-panel-permit-all: false
+  web:
+    owner-filter: true
 
 keycloak:
   admin:

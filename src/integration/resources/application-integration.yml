@@ -38,6 +38,9 @@ app:
     swagger-public: false
     swagger-token: ""
     swagger-url: ""
+    web-panel-permit-all: true
+  web:
+    owner-filter: true
 
 keycloak:
   admin:

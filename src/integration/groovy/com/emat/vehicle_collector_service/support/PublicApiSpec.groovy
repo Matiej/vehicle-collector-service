@@ -100,7 +100,10 @@ abstract public class PublicApiSpec extends Specification {
             String ownerId,
             String sessionPublicId,
             List<Thumbnail> thumbnails = [],
-            CaptureInfo capture = new CaptureInfo()
+            CaptureInfo capture = new CaptureInfo(),
+            AnnotationsInfo annotations = new AnnotationsInfo(),
+            VehicleRecognition vehicleRecognition = new VehicleRecognition(),
+            String originalFilename = "sample.jpg"
     ) {
         assetRepository.save(
                 new AssetDocument(
@@ -111,7 +114,7 @@ abstract public class PublicApiSpec extends Specification {
                         AssetType.IMAGE,
                         new FileInfo(
                                 "image/2026/8/${shortId()}.jpg",
-                                "sample.jpg",
+                                originalFilename,
                                 "image/jpeg",
                                 1024L,
                                 null,
@@ -122,8 +125,8 @@ abstract public class PublicApiSpec extends Specification {
                                 thumbnails
                         ),
                         capture,
-                        new AnnotationsInfo(),
-                        new VehicleRecognition(),
+                        annotations,
+                        vehicleRecognition,
                         null,
                         null,
                         null
@@ -131,9 +134,13 @@ abstract public class PublicApiSpec extends Specification {
         ).block()
     }
 
-    protected AssetDocument givenAssetWithThumbnail(String ownerId, String sessionPublicId) {
-        String thumbnailKeyPath = "thumbnails/${shortId()}_320.jpg"
-        AssetDocument asset = givenAsset(ownerId, sessionPublicId, [new Thumbnail(ThumbnailSize.THUMB_320, thumbnailKeyPath)])
+    protected AssetDocument givenAssetWithThumbnail(
+            String ownerId,
+            String sessionPublicId,
+            ThumbnailSize size = ThumbnailSize.THUMB_320
+    ) {
+        String thumbnailKeyPath = "thumbnails/${shortId()}_${size.name().toLowerCase()}.jpg"
+        AssetDocument asset = givenAsset(ownerId, sessionPublicId, [new Thumbnail(size, thumbnailKeyPath)])
         writeThumbnailFile(thumbnailKeyPath)
         asset
     }
