@@ -1,5 +1,7 @@
 package com.emat.vehicle_collector_service.api.web
 
+import com.emat.vehicle_collector_service.assets.domain.GeoPoint
+import com.emat.vehicle_collector_service.assets.domain.GpsSource
 import com.emat.vehicle_collector_service.assets.domain.RecognitionBadge
 import com.emat.vehicle_collector_service.assets.domain.ThumbnailSize
 import com.emat.vehicle_collector_service.assets.infra.AnnotationsInfo
@@ -269,7 +271,150 @@ class PhotoWebControllerIT extends PublicApiSpec {
                 .expectStatus().isNotFound()
     }
 
+    def "detail returns the full contract shape for a fresh RAW photo, no session, no candidates"() {
+        given:
+        AssetDocument asset = givenAsset(USER_A, null)
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${asset.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.assetPublicId').isEqualTo(asset.assetPublicId)
+                .jsonPath('$.originalFilename').isEqualTo("sample.jpg")
+                .jsonPath('$.badge').isEqualTo("RAW")
+                .jsonPath('$.favorite').isEqualTo(false)
+                .jsonPath('$.albums.length()').isEqualTo(0)
+                .jsonPath('$.recognition.bestCandidate').doesNotExist()
+                .jsonPath('$.recognition.candidates.length()').isEqualTo(0)
+                .jsonPath('$.recognition.errorMessage').doesNotExist()
+                .jsonPath('$.exif.gps').doesNotExist()
+                .jsonPath('$.session').doesNotExist()
+                .jsonPath('$.notes').doesNotExist()
+                .jsonPath('$.externalInfo.length()').isEqualTo(0)
+                .jsonPath('$.file.size').isEqualTo(1024)
+                .jsonPath('$.file.hash').isEqualTo("sha256:${asset.file.sha256}".toString())
+    }
+
+    def "detail splits bestCandidate out of candidates, no duplicate"() {
+        given:
+        VehicleCandidate best = candidate(5L, "Ford", 0.90d, true)
+        VehicleCandidate other = candidate(7L, "Opel", 0.71d, false)
+        AssetDocument asset = givenAsset(
+                USER_A, null, [], new CaptureInfo(), new AnnotationsInfo(),
+                new VehicleRecognition(RecognitionBadge.TO_REVIEW, new RagStatus(), null, null, [best, other], [:], new RagSync())
+        )
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${asset.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.recognition.bestCandidate.brand').isEqualTo("Ford")
+                .jsonPath('$.recognition.bestCandidate.isSelected').isEqualTo(true)
+                .jsonPath('$.recognition.candidates.length()').isEqualTo(1)
+                .jsonPath('$.recognition.candidates[0].brand').isEqualTo("Opel")
+    }
+
+    def "detail exposes exif.gps.lon, not lng"() {
+        given:
+        AssetDocument asset = givenAsset(
+                USER_A, null, [], new CaptureInfo(null, new GeoPoint(35.8989055d, 14.4936972d), null, GpsSource.EXIF, null, null),
+                new AnnotationsInfo(), new VehicleRecognition()
+        )
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${asset.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.exif.gps.lat').isEqualTo(35.8989055d)
+                .jsonPath('$.exif.gps.lon').isEqualTo(14.4936972d)
+                .jsonPath('$.exif.gps.lng').doesNotExist()
+    }
+
+    def "detail resolves the session by sessionPublicId"() {
+        given:
+        SessionDocument session = givenSession(USER_A)
+        AssetDocument asset = givenAsset(USER_A, session.sessionPublicId)
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${asset.assetPublicId}?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.session.publicId').isEqualTo(session.sessionPublicId)
+                .jsonPath('$.session.name').isEqualTo(session.sessionName)
+                .jsonPath('$.session.hasAudio').isEqualTo(false)
+    }
+
+    def "detail for an unknown assetPublicId returns 404"() {
+        expect:
+        webTestClient.get().uri("/api/web/photos/does-not-exist?ownerId=${USER_A}")
+                .exchange()
+                .expectStatus().isNotFound()
+    }
+
+    def "detail for another owner's photo returns 404, not 403 or empty"() {
+        given:
+        AssetDocument asset = givenAsset(USER_A, null)
+
+        expect:
+        webTestClient.get().uri("/api/web/photos/${asset.assetPublicId}?ownerId=${USER_B}")
+                .exchange()
+                .expectStatus().isNotFound()
+    }
+
+    def "preview serves the 640 thumbnail with a private cache header"() {
+        given:
+        AssetDocument asset = givenAssetWithThumbnail(USER_A, null, ThumbnailSize.THUMB_640)
+
+        expect:
+        webTestClient.get().uri("/api/web/assets/${asset.assetPublicId}/preview")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals("Cache-Control", "private, max-age=31536000, immutable")
+    }
+
+    def "preview for a photo without a ready 640 thumbnail returns 404"() {
+        given:
+        AssetDocument asset = givenAsset(USER_A, null)
+
+        expect:
+        webTestClient.get().uri("/api/web/assets/${asset.assetPublicId}/preview")
+                .exchange()
+                .expectStatus().isNotFound()
+    }
+
     private static VehicleRecognition recognitionWithBadge(RecognitionBadge badge) {
         new VehicleRecognition(badge, new RagStatus(), null, null, [], [:], new RagSync())
+    }
+
+    private static VehicleCandidate candidate(Long ragCandidateId, String brand, Double confidence, boolean selected) {
+        new VehicleCandidate(
+                ragCandidateId,
+                null,
+                selected,
+                "similarity",
+                brand,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                [],
+                confidence,
+                false
+        )
     }
 }

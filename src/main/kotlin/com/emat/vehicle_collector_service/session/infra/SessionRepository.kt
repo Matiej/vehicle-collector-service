@@ -15,4 +15,5 @@ interface SessionRepository: ReactiveMongoRepository<SessionDocument, String> {
     fun countByOwnerId(ownerId: String): Mono<Long>
     fun findBySessionPublicIdAndOwnerId(sessionPublicId: String, ownerId: String): Mono<SessionDocument>
     fun existsBySessionPublicIdAndOwnerId(sessionPublicId: String, ownerId: String): Mono<Boolean>
+    fun findBySessionPublicId(sessionPublicId: String): Mono<SessionDocument>
 }
