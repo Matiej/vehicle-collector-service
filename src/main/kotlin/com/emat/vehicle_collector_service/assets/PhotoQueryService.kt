@@ -2,14 +2,17 @@ package com.emat.vehicle_collector_service.assets
 
 import com.emat.vehicle_collector_service.api.dto.PageResponse
 import com.emat.vehicle_collector_service.api.web.PhotoWebMapper
+import com.emat.vehicle_collector_service.api.web.dto.PhotoDetailDto
 import com.emat.vehicle_collector_service.api.web.dto.PhotoListItemDto
 import com.emat.vehicle_collector_service.api.web.dto.PhotoListQuery
+import com.emat.vehicle_collector_service.api.web.dto.SessionRefDto
 import com.emat.vehicle_collector_service.assets.domain.AssetType
 import com.emat.vehicle_collector_service.assets.domain.RecognitionBadge
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
 import com.emat.vehicle_collector_service.assets.infra.AssetRepository
 import com.emat.vehicle_collector_service.configuration.AppData
 import com.emat.vehicle_collector_service.infrastructure.error.ResourceNotFoundException
+import com.emat.vehicle_collector_service.session.infra.SessionRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
@@ -23,6 +26,7 @@ import java.util.regex.Pattern
 class PhotoQueryService(
     private val template: ReactiveMongoTemplate,
     private val assetRepository: AssetRepository,
+    private val sessionRepository: SessionRepository,
     private val appData: AppData
 ) {
 
@@ -53,6 +57,28 @@ class PhotoQueryService(
     fun findAssetForThumbnail(assetPublicId: String): Mono<AssetDocument> =
         assetRepository.findByAssetPublicId(assetPublicId)
             .switchIfEmpty(Mono.error(ResourceNotFoundException("Photo not found: $assetPublicId")))
+
+    fun getPhotoDetail(ownerId: String, assetPublicId: String): Mono<PhotoDetailDto> {
+        val criteria = mutableListOf(Criteria.where("assetPublicId").`is`(assetPublicId))
+        if (appData.isWebOwnerFilterEnabled()) {
+            criteria += Criteria.where("ownerId").`is`(ownerId)
+        }
+        val query = Query(Criteria().andOperator(*criteria.toTypedArray()))
+
+        return template.findOne(query, AssetDocument::class.java)
+            .switchIfEmpty(Mono.error(ResourceNotFoundException("Photo not found: $assetPublicId")))
+            .flatMap { asset ->
+                resolveSessionRef(asset.sessionPublicId)
+                    .map { session -> PhotoWebMapper.toDetail(asset, session) }
+                    .switchIfEmpty(Mono.fromSupplier { PhotoWebMapper.toDetail(asset, null) })
+            }
+    }
+
+    private fun resolveSessionRef(sessionPublicId: String?): Mono<SessionRefDto> {
+        if (sessionPublicId == null) return Mono.empty()
+        return sessionRepository.findBySessionPublicId(sessionPublicId)
+            .map { SessionRefDto(publicId = it.sessionPublicId, name = it.sessionName ?: it.sessionPublicId, hasAudio = false) }
+    }
 
     private fun buildCriteria(ownerId: String, query: PhotoListQuery): List<Criteria> {
         val criteria = mutableListOf(Criteria.where("assetType").`is`(AssetType.IMAGE))
