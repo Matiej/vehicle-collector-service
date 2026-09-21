@@ -321,7 +321,7 @@ class PhotoWebControllerIT extends PublicApiSpec {
                 .jsonPath('$.recognition.candidates[0].brand').isEqualTo("Opel")
     }
 
-    def "detail exposes exif.gps.lon, not lng"() {
+    def "detail exposes exif.gps.lng, not lon"() {
         given:
         AssetDocument asset = givenAsset(
                 USER_A, null, [], new CaptureInfo(null, new GeoPoint(35.8989055d, 14.4936972d), null, GpsSource.EXIF, null, null),
@@ -334,8 +334,8 @@ class PhotoWebControllerIT extends PublicApiSpec {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath('$.exif.gps.lat').isEqualTo(35.8989055d)
-                .jsonPath('$.exif.gps.lon').isEqualTo(14.4936972d)
-                .jsonPath('$.exif.gps.lng').doesNotExist()
+                .jsonPath('$.exif.gps.lng').isEqualTo(14.4936972d)
+                .jsonPath('$.exif.gps.lon').doesNotExist()
     }
 
     def "detail resolves the session by sessionPublicId"() {
@@ -520,7 +520,7 @@ class PhotoWebControllerIT extends PublicApiSpec {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath('$.exif.gps.lat').isEqualTo(35.8989055d)
-                .jsonPath('$.exif.gps.lon').isEqualTo(14.4936972d)
+                .jsonPath('$.exif.gps.lng').isEqualTo(14.4936972d)
     }
 
     def "detail never leaks the name of a session owned by somebody else"() {

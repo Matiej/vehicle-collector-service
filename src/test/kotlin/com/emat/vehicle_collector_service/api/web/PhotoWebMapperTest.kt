@@ -1,10 +1,10 @@
 package com.emat.vehicle_collector_service.api.web
 
-import com.emat.vehicle_collector_service.api.web.dto.AnalysisStatusDto
-import com.emat.vehicle_collector_service.api.web.dto.SessionRefDto
-import com.emat.vehicle_collector_service.api.web.dto.SuggestionStatusDto
-import com.emat.vehicle_collector_service.api.web.dto.VectorStatusDto
-import com.emat.vehicle_collector_service.api.web.dto.VerificationStatusDto
+import com.emat.vehicle_collector_service.api.web.dto.AnalysisStatusResponse
+import com.emat.vehicle_collector_service.api.web.dto.SessionRefResponse
+import com.emat.vehicle_collector_service.api.web.dto.SuggestionStatusResponse
+import com.emat.vehicle_collector_service.api.web.dto.VectorStatusResponse
+import com.emat.vehicle_collector_service.api.web.dto.VerificationStatusResponse
 import com.emat.vehicle_collector_service.assets.domain.AnalysisStatus
 import com.emat.vehicle_collector_service.assets.domain.AssetType
 import com.emat.vehicle_collector_service.assets.domain.RecognitionBadge
@@ -208,7 +208,7 @@ class PhotoWebMapperTest {
         "VECTORIZED, VECTORIZED",
         "FAILED, FAILED"
     )
-    fun `vectorStatus is mapped onto the frozen contract values`(domain: VectorStatus, wire: VectorStatusDto) {
+    fun `vectorStatus is mapped onto the frozen contract values`(domain: VectorStatus, wire: VectorStatusResponse) {
         val document = document(recognition = VehicleRecognition(ragStatus = RagStatus(vectorStatus = domain)))
 
         assertEquals(wire, PhotoWebMapper.toDetail(document, null).recognition.vectorStatus)
@@ -222,7 +222,7 @@ class PhotoWebMapperTest {
         "DONE, DONE",
         "FAILED, FAILED"
     )
-    fun `analysisStatus is mapped onto the frozen contract values`(domain: AnalysisStatus, wire: AnalysisStatusDto) {
+    fun `analysisStatus is mapped onto the frozen contract values`(domain: AnalysisStatus, wire: AnalysisStatusResponse) {
         val document = document(recognition = VehicleRecognition(ragStatus = RagStatus(analysisStatus = domain)))
 
         assertEquals(wire, PhotoWebMapper.toDetail(document, null).recognition.analysisStatus)
@@ -237,7 +237,7 @@ class PhotoWebMapperTest {
     )
     fun `verificationStatus is mapped onto the frozen contract values`(
         domain: VerificationStatus,
-        wire: VerificationStatusDto
+        wire: VerificationStatusResponse
     ) {
         val document = document(recognition = VehicleRecognition(ragStatus = RagStatus(verificationStatus = domain)))
 
@@ -252,7 +252,7 @@ class PhotoWebMapperTest {
     )
     fun `suggestionStatus passes through, both sides share the same values`(
         domain: SuggestionStatus,
-        wire: SuggestionStatusDto
+        wire: SuggestionStatusResponse
     ) {
         val document = document(recognition = VehicleRecognition(ragStatus = RagStatus(suggestionStatus = domain)))
 
@@ -322,7 +322,7 @@ class PhotoWebMapperTest {
     }
 
     @Test
-    fun `exif gps serializes lat and lon, altitude is unknown`() {
+    fun `exif gps serializes lat and lng, altitude is unknown`() {
         val document = document(
             capture = CaptureInfo(exifGps = GeoPoint(lat = 35.8989055, lng = 14.4936972))
         )
@@ -330,7 +330,7 @@ class PhotoWebMapperTest {
         val dto = PhotoWebMapper.toDetail(document, session = null)
 
         assertEquals(35.8989055, dto.exif.gps?.lat)
-        assertEquals(14.4936972, dto.exif.gps?.lon)
+        assertEquals(14.4936972, dto.exif.gps?.lng)
         assertNull(dto.exif.gps?.altitude)
     }
 
@@ -347,7 +347,7 @@ class PhotoWebMapperTest {
         val dto = PhotoWebMapper.toDetail(corrected, session = null)
 
         assertEquals(35.8989055, dto.exif.gps?.lat)
-        assertEquals(14.4936972, dto.exif.gps?.lon)
+        assertEquals(14.4936972, dto.exif.gps?.lng)
     }
 
     @Test
@@ -408,7 +408,7 @@ class PhotoWebMapperTest {
     @Test
     fun `albums are always empty, session passes through as given`() {
         val document = document()
-        val session = SessionRefDto(publicId = "se_marina", name = "Marina walk", hasAudio = false)
+        val session = SessionRefResponse(publicId = "se_marina", name = "Marina walk", hasAudio = false)
 
         val withSession = PhotoWebMapper.toDetail(document, session)
         val withoutSession = PhotoWebMapper.toDetail(document, session = null)

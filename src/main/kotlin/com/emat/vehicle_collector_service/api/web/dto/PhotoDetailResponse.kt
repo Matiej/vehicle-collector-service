@@ -4,7 +4,7 @@ import com.emat.vehicle_collector_service.assets.domain.RecognitionBadge
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.Instant
 
-data class PhotoDetailDto(
+data class PhotoDetailResponse(
     val assetPublicId: String,
     val title: String?,
     val originalFilename: String?,
@@ -14,40 +14,40 @@ data class PhotoDetailDto(
     val createdAt: Instant,
     val countryCode: String?,
     val city: String?,
-    val albums: List<AlbumRefDto>,
-    val recognition: RecognitionDto,
-    val exif: ExifDto,
-    val session: SessionRefDto?,
+    val albums: List<AlbumRefResponse>,
+    val recognition: RecognitionResponse,
+    val exif: ExifResponse,
+    val session: SessionRefResponse?,
     val notes: String?,
-    val externalInfo: List<ExternalInfoDto>,
-    val file: FileMetaDto
+    val externalInfo: List<ExternalInfoResponse>,
+    val file: FileMetaResponse
 )
 
-data class AlbumRefDto(
+data class AlbumRefResponse(
     val publicId: String,
     val name: String
 )
 
-data class RecognitionDto(
-    val vectorStatus: VectorStatusDto,
-    val analysisStatus: AnalysisStatusDto,
-    val suggestionStatus: SuggestionStatusDto,
-    val verificationStatus: VerificationStatusDto,
+data class RecognitionResponse(
+    val vectorStatus: VectorStatusResponse,
+    val analysisStatus: AnalysisStatusResponse,
+    val suggestionStatus: SuggestionStatusResponse,
+    val verificationStatus: VerificationStatusResponse,
     val errorMessage: String?,
-    val bestCandidate: CandidateDto?,
-    val candidates: List<CandidateDto>,
+    val bestCandidate: CandidateResponse?,
+    val candidates: List<CandidateResponse>,
     val metaData: Map<String, Any>
 )
 
-enum class VectorStatusDto { PENDING, VECTORIZED, FAILED }
+enum class VectorStatusResponse { PENDING, VECTORIZED, FAILED }
 
-enum class AnalysisStatusDto { RECEIVED, PROCESSING, DONE, FAILED }
+enum class AnalysisStatusResponse { RECEIVED, PROCESSING, DONE, FAILED }
 
-enum class SuggestionStatusDto { NONE, UNKNOWN, SUGGESTED }
+enum class SuggestionStatusResponse { NONE, UNKNOWN, SUGGESTED }
 
-enum class VerificationStatusDto { NONE, PENDING_REVIEW, VERIFIED }
+enum class VerificationStatusResponse { NONE, PENDING_REVIEW, VERIFIED }
 
-data class CandidateDto(
+data class CandidateResponse(
     val source: String?,
     val brand: String?,
     val model: String?,
@@ -72,35 +72,35 @@ data class CandidateDto(
     val humanEdited: Boolean
 )
 
-data class ExifDto(
+data class ExifResponse(
     val camera: String?,
     val lens: String?,
     val iso: Int?,
     val exposure: String?,
     val fNumber: Double?,
     val focalLength: Double?,
-    val gps: GpsDto?
+    val gps: GpsResponse?
 )
 
-data class GpsDto(
+data class GpsResponse(
     val lat: Double,
-    val lon: Double,
+    val lng: Double,
     val altitude: Double?
 )
 
-data class SessionRefDto(
+data class SessionRefResponse(
     val publicId: String,
     val name: String,
     val hasAudio: Boolean
 )
 
-data class ExternalInfoDto(
+data class ExternalInfoResponse(
     val source: String,
     val title: String,
     val url: String
 )
 
-data class FileMetaDto(
+data class FileMetaResponse(
     val size: Long,
     val width: Int?,
     val height: Int?,

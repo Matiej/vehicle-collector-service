@@ -1,18 +1,18 @@
 package com.emat.vehicle_collector_service.api.web
 
-import com.emat.vehicle_collector_service.api.web.dto.AnalysisStatusDto
-import com.emat.vehicle_collector_service.api.web.dto.CandidateDto
-import com.emat.vehicle_collector_service.api.web.dto.ExifDto
-import com.emat.vehicle_collector_service.api.web.dto.ExternalInfoDto
-import com.emat.vehicle_collector_service.api.web.dto.FileMetaDto
-import com.emat.vehicle_collector_service.api.web.dto.GpsDto
-import com.emat.vehicle_collector_service.api.web.dto.PhotoDetailDto
-import com.emat.vehicle_collector_service.api.web.dto.PhotoListItemDto
-import com.emat.vehicle_collector_service.api.web.dto.RecognitionDto
-import com.emat.vehicle_collector_service.api.web.dto.SessionRefDto
-import com.emat.vehicle_collector_service.api.web.dto.SuggestionStatusDto
-import com.emat.vehicle_collector_service.api.web.dto.VectorStatusDto
-import com.emat.vehicle_collector_service.api.web.dto.VerificationStatusDto
+import com.emat.vehicle_collector_service.api.web.dto.AnalysisStatusResponse
+import com.emat.vehicle_collector_service.api.web.dto.CandidateResponse
+import com.emat.vehicle_collector_service.api.web.dto.ExifResponse
+import com.emat.vehicle_collector_service.api.web.dto.ExternalInfoResponse
+import com.emat.vehicle_collector_service.api.web.dto.FileMetaResponse
+import com.emat.vehicle_collector_service.api.web.dto.GpsResponse
+import com.emat.vehicle_collector_service.api.web.dto.PhotoDetailResponse
+import com.emat.vehicle_collector_service.api.web.dto.PhotoListItemResponse
+import com.emat.vehicle_collector_service.api.web.dto.RecognitionResponse
+import com.emat.vehicle_collector_service.api.web.dto.SessionRefResponse
+import com.emat.vehicle_collector_service.api.web.dto.SuggestionStatusResponse
+import com.emat.vehicle_collector_service.api.web.dto.VectorStatusResponse
+import com.emat.vehicle_collector_service.api.web.dto.VerificationStatusResponse
 import com.emat.vehicle_collector_service.assets.domain.AnalysisStatus
 import com.emat.vehicle_collector_service.assets.domain.RecognitionBadge
 import com.emat.vehicle_collector_service.assets.domain.SuggestionStatus
@@ -31,10 +31,10 @@ object PhotoWebMapper {
 
     private val badgesWithConfidentPick = setOf(RecognitionBadge.VERIFIED, RecognitionBadge.TO_REVIEW)
 
-    fun toListItem(asset: AssetDocument): PhotoListItemDto {
+    fun toListItem(asset: AssetDocument): PhotoListItemResponse {
         val recognition = asset.vehicleRecognition
         val best = recognition.best
-        return PhotoListItemDto(
+        return PhotoListItemResponse(
             assetPublicId = asset.assetPublicId,
             title = asset.annotations.title,
             originalFilename = asset.file.originalFilename,
@@ -54,7 +54,7 @@ object PhotoWebMapper {
         )
     }
 
-    fun toDetail(asset: AssetDocument, session: SessionRefDto?): PhotoDetailDto {
+    fun toDetail(asset: AssetDocument, session: SessionRefResponse?): PhotoDetailResponse {
         val recognition = asset.vehicleRecognition
         val ragStatus = recognition.ragStatus
         val (best, otherCandidates) = splitBestAndCandidates(recognition)
@@ -65,7 +65,7 @@ object PhotoWebMapper {
         // would drop the location of a photo positioned by hand.
         val gps = asset.capture.activeGps()
 
-        return PhotoDetailDto(
+        return PhotoDetailResponse(
             assetPublicId = asset.assetPublicId,
             title = asset.annotations.title,
             originalFilename = asset.file.originalFilename,
@@ -76,32 +76,32 @@ object PhotoWebMapper {
             countryCode = asset.capture.place?.countryCode,
             city = asset.capture.place?.city,
             albums = emptyList(),
-            recognition = RecognitionDto(
-                vectorStatus = toVectorStatusDto(ragStatus.vectorStatus),
-                analysisStatus = toAnalysisStatusDto(ragStatus.analysisStatus),
-                suggestionStatus = toSuggestionStatusDto(ragStatus.suggestionStatus),
-                verificationStatus = toVerificationStatusDto(ragStatus.verificationStatus),
+            recognition = RecognitionResponse(
+                vectorStatus = toVectorStatusResponse(ragStatus.vectorStatus),
+                analysisStatus = toAnalysisStatusResponse(ragStatus.analysisStatus),
+                suggestionStatus = toSuggestionStatusResponse(ragStatus.suggestionStatus),
+                verificationStatus = toVerificationStatusResponse(ragStatus.verificationStatus),
                 errorMessage = if (hasFailedAxis) recognition.lastError else null,
-                bestCandidate = best?.let(::toCandidateDto),
-                candidates = otherCandidates.map(::toCandidateDto),
+                bestCandidate = best?.let(::toCandidateResponse),
+                candidates = otherCandidates.map(::toCandidateResponse),
                 metaData = recognition.metaData
             ),
-            exif = ExifDto(
+            exif = ExifResponse(
                 camera = listOfNotNull(camera?.make, camera?.model).joinToString(" ").ifBlank { null },
                 lens = camera?.lens,
                 iso = camera?.iso,
                 exposure = camera?.exposure,
                 fNumber = camera?.fNumber,
                 focalLength = camera?.focalLength,
-                gps = gps?.let { GpsDto(lat = it.lat, lon = it.lng, altitude = null) }
+                gps = gps?.let { GpsResponse(lat = it.lat, lng = it.lng, altitude = null) }
             ),
             session = session,
             notes = asset.annotations.notes,
             externalInfo = asset.annotations.externalInfo.mapNotNull { info ->
                 info.url?.takeIf { it.isNotBlank() }
-                    ?.let { ExternalInfoDto(source = info.source ?: info.type, title = info.label, url = it) }
+                    ?.let { ExternalInfoResponse(source = info.source ?: info.type, title = info.label, url = it) }
             },
-            file = FileMetaDto(
+            file = FileMetaResponse(
                 size = asset.file.sizeBytes,
                 width = asset.file.width,
                 height = asset.file.height,
@@ -136,33 +136,33 @@ object PhotoWebMapper {
         return best to rest
     }
 
-    private fun toVectorStatusDto(status: VectorStatus): VectorStatusDto = when (status) {
-        VectorStatus.NONE, VectorStatus.PENDING -> VectorStatusDto.PENDING
-        VectorStatus.VECTORIZED -> VectorStatusDto.VECTORIZED
-        VectorStatus.FAILED -> VectorStatusDto.FAILED
+    private fun toVectorStatusResponse(status: VectorStatus): VectorStatusResponse = when (status) {
+        VectorStatus.NONE, VectorStatus.PENDING -> VectorStatusResponse.PENDING
+        VectorStatus.VECTORIZED -> VectorStatusResponse.VECTORIZED
+        VectorStatus.FAILED -> VectorStatusResponse.FAILED
     }
 
-    private fun toAnalysisStatusDto(status: AnalysisStatus): AnalysisStatusDto = when (status) {
-        AnalysisStatus.NONE, AnalysisStatus.RECEIVED -> AnalysisStatusDto.RECEIVED
-        AnalysisStatus.PROCESSING -> AnalysisStatusDto.PROCESSING
-        AnalysisStatus.DONE -> AnalysisStatusDto.DONE
-        AnalysisStatus.FAILED -> AnalysisStatusDto.FAILED
+    private fun toAnalysisStatusResponse(status: AnalysisStatus): AnalysisStatusResponse = when (status) {
+        AnalysisStatus.NONE, AnalysisStatus.RECEIVED -> AnalysisStatusResponse.RECEIVED
+        AnalysisStatus.PROCESSING -> AnalysisStatusResponse.PROCESSING
+        AnalysisStatus.DONE -> AnalysisStatusResponse.DONE
+        AnalysisStatus.FAILED -> AnalysisStatusResponse.FAILED
     }
 
-    private fun toSuggestionStatusDto(status: SuggestionStatus): SuggestionStatusDto = when (status) {
-        SuggestionStatus.NONE -> SuggestionStatusDto.NONE
-        SuggestionStatus.UNKNOWN -> SuggestionStatusDto.UNKNOWN
-        SuggestionStatus.SUGGESTED -> SuggestionStatusDto.SUGGESTED
+    private fun toSuggestionStatusResponse(status: SuggestionStatus): SuggestionStatusResponse = when (status) {
+        SuggestionStatus.NONE -> SuggestionStatusResponse.NONE
+        SuggestionStatus.UNKNOWN -> SuggestionStatusResponse.UNKNOWN
+        SuggestionStatus.SUGGESTED -> SuggestionStatusResponse.SUGGESTED
     }
 
-    private fun toVerificationStatusDto(status: VerificationStatus): VerificationStatusDto = when (status) {
-        VerificationStatus.UNVERIFIED, VerificationStatus.REJECTED -> VerificationStatusDto.NONE
-        VerificationStatus.PENDING_REVIEW -> VerificationStatusDto.PENDING_REVIEW
-        VerificationStatus.VERIFIED -> VerificationStatusDto.VERIFIED
+    private fun toVerificationStatusResponse(status: VerificationStatus): VerificationStatusResponse = when (status) {
+        VerificationStatus.UNVERIFIED, VerificationStatus.REJECTED -> VerificationStatusResponse.NONE
+        VerificationStatus.PENDING_REVIEW -> VerificationStatusResponse.PENDING_REVIEW
+        VerificationStatus.VERIFIED -> VerificationStatusResponse.VERIFIED
     }
 
-    private fun toCandidateDto(candidate: VehicleCandidate): CandidateDto =
-        CandidateDto(
+    private fun toCandidateResponse(candidate: VehicleCandidate): CandidateResponse =
+        CandidateResponse(
             source = candidate.source,
             brand = candidate.brand,
             model = candidate.model,
