@@ -2,10 +2,10 @@ package com.emat.vehicle_collector_service.assets
 
 import com.emat.vehicle_collector_service.api.dto.PageResponse
 import com.emat.vehicle_collector_service.api.web.PhotoWebMapper
-import com.emat.vehicle_collector_service.api.web.dto.PhotoDetailDto
-import com.emat.vehicle_collector_service.api.web.dto.PhotoListItemDto
+import com.emat.vehicle_collector_service.api.web.dto.PhotoDetailResponse
+import com.emat.vehicle_collector_service.api.web.dto.PhotoListItemResponse
 import com.emat.vehicle_collector_service.api.web.dto.PhotoListQuery
-import com.emat.vehicle_collector_service.api.web.dto.SessionRefDto
+import com.emat.vehicle_collector_service.api.web.dto.SessionRefResponse
 import com.emat.vehicle_collector_service.assets.domain.AssetType
 import com.emat.vehicle_collector_service.assets.domain.RecognitionBadge
 import com.emat.vehicle_collector_service.assets.infra.AssetDocument
@@ -30,7 +30,7 @@ class PhotoQueryService(
     private val appData: AppData
 ) {
 
-    fun listPhotos(ownerId: String, query: PhotoListQuery): Mono<PageResponse<PhotoListItemDto>> {
+    fun listPhotos(ownerId: String, query: PhotoListQuery): Mono<PageResponse<PhotoListItemResponse>> {
         val filter = Criteria().andOperator(*buildCriteria(ownerId, query).toTypedArray())
         val size = query.size.coerceAtMost(MAX_SIZE)
         val pageRequest = PageRequest.of(query.page, size, resolveSort(query.sort))
@@ -58,7 +58,7 @@ class PhotoQueryService(
         assetRepository.findByAssetPublicId(assetPublicId)
             .switchIfEmpty(Mono.error(ResourceNotFoundException("Photo not found: $assetPublicId")))
 
-    fun getPhotoDetail(ownerId: String, assetPublicId: String): Mono<PhotoDetailDto> {
+    fun getPhotoDetail(ownerId: String, assetPublicId: String): Mono<PhotoDetailResponse> {
         val criteria = mutableListOf(
             Criteria.where("assetPublicId").`is`(assetPublicId),
             Criteria.where("assetType").`is`(AssetType.IMAGE)
@@ -77,13 +77,13 @@ class PhotoQueryService(
             }
     }
 
-    private fun resolveSessionRef(sessionPublicId: String?, ownerId: String): Mono<SessionRefDto> {
+    private fun resolveSessionRef(sessionPublicId: String?, ownerId: String): Mono<SessionRefResponse> {
         if (sessionPublicId == null) return Mono.empty()
         return sessionRepository.findBySessionPublicIdAndOwnerId(sessionPublicId, ownerId)
             .flatMap { session ->
                 assetRepository.existsBySessionPublicIdAndAssetType(sessionPublicId, AssetType.AUDIO)
                     .map { hasAudio ->
-                        SessionRefDto(
+                        SessionRefResponse(
                             publicId = session.sessionPublicId,
                             name = session.sessionName ?: session.sessionPublicId,
                             hasAudio = hasAudio

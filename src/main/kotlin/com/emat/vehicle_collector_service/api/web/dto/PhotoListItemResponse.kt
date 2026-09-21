@@ -3,7 +3,7 @@ package com.emat.vehicle_collector_service.api.web.dto
 import com.emat.vehicle_collector_service.assets.domain.RecognitionBadge
 import java.time.Instant
 
-data class PhotoListItemDto(
+data class PhotoListItemResponse(
     val assetPublicId: String,
     val title: String?,
     val originalFilename: String?,
