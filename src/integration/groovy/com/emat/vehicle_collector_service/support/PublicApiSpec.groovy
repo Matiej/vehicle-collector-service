@@ -103,7 +103,9 @@ abstract public class PublicApiSpec extends Specification {
             CaptureInfo capture = new CaptureInfo(),
             AnnotationsInfo annotations = new AnnotationsInfo(),
             VehicleRecognition vehicleRecognition = new VehicleRecognition(),
-            String originalFilename = "sample.jpg"
+            String originalFilename = "sample.jpg",
+            String mimeType = "image/jpeg",
+            AssetType assetType = AssetType.IMAGE
     ) {
         assetRepository.save(
                 new AssetDocument(
@@ -111,11 +113,11 @@ abstract public class PublicApiSpec extends Specification {
                         "asset_it_${shortId()}",
                         ownerId,
                         sessionPublicId,
-                        AssetType.IMAGE,
+                        assetType,
                         new FileInfo(
                                 "image/2026/8/${shortId()}.jpg",
                                 originalFilename,
-                                "image/jpeg",
+                                mimeType,
                                 1024L,
                                 null,
                                 null,
@@ -141,12 +143,32 @@ abstract public class PublicApiSpec extends Specification {
     ) {
         String thumbnailKeyPath = "thumbnails/${shortId()}_${size.name().toLowerCase()}.jpg"
         AssetDocument asset = givenAsset(ownerId, sessionPublicId, [new Thumbnail(size, thumbnailKeyPath)])
-        writeThumbnailFile(thumbnailKeyPath)
+        writeAssetFile(thumbnailKeyPath)
         asset
     }
 
-    private void writeThumbnailFile(String thumbnailKeyPath) {
-        Path path = Path.of(appData.getAssetsDir()).resolve(thumbnailKeyPath)
+    protected AssetDocument givenAssetWithOriginalFile(
+            String ownerId,
+            String sessionPublicId,
+            String mimeType = "image/jpeg"
+    ) {
+        AssetDocument asset = givenAsset(
+                ownerId, sessionPublicId, [], new CaptureInfo(), new AnnotationsInfo(),
+                new VehicleRecognition(), "sample.jpg", mimeType
+        )
+        writeAssetFile(asset.file.storageKeyPath)
+        asset
+    }
+
+    protected AssetDocument givenAudioAsset(String ownerId, String sessionPublicId = null) {
+        givenAsset(
+                ownerId, sessionPublicId, [], new CaptureInfo(), new AnnotationsInfo(),
+                new VehicleRecognition(), "note.m4a", "audio/mp4", AssetType.AUDIO
+        )
+    }
+
+    private void writeAssetFile(String storageKeyPath) {
+        Path path = Path.of(appData.getAssetsDir()).resolve(storageKeyPath)
         Files.createDirectories(path.parent)
         Files.write(path, [0xFF, 0xD8, 0xFF, 0xD9] as byte[])
     }

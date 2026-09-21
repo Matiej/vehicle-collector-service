@@ -1,5 +1,6 @@
 package com.emat.vehicle_collector_service.assets.infra
 
+import com.emat.vehicle_collector_service.assets.domain.AssetType
 import org.springframework.data.domain.Pageable
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository
 import org.springframework.stereotype.Repository
@@ -15,6 +16,7 @@ interface AssetRepository: ReactiveMongoRepository<AssetDocument, String> {
     fun findByAssetPublicId(assetPublicId: String): Mono<AssetDocument>
 
     fun findByAssetPublicIdAndOwnerId(assetPublicId: String, ownerId: String): Mono<AssetDocument>
+    fun existsBySessionPublicIdAndAssetType(sessionPublicId: String, assetType: AssetType): Mono<Boolean>
     fun findAllBySessionPublicIdAndOwnerId(
         sessionPublicId: String,
         ownerId: String,
