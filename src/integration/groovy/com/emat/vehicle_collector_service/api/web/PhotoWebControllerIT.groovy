@@ -290,9 +290,10 @@ class PhotoWebControllerIT extends PublicApiSpec {
                 .jsonPath('$.badge').isEqualTo("RAW")
                 .jsonPath('$.favorite').isEqualTo(false)
                 .jsonPath('$.albums.length()').isEqualTo(0)
-                .jsonPath('$.recognition.bestCandidate').doesNotExist()
-                .jsonPath('$.recognition.candidates.length()').isEqualTo(0)
-                .jsonPath('$.recognition.errorMessage').doesNotExist()
+                .jsonPath('$.recognition').doesNotExist()
+                .jsonPath('$.vehicleRecognition.bestCandidate').doesNotExist()
+                .jsonPath('$.vehicleRecognition.candidates.length()').isEqualTo(0)
+                .jsonPath('$.vehicleRecognition.errorMessage').doesNotExist()
                 .jsonPath('$.exif.gps').doesNotExist()
                 .jsonPath('$.session').doesNotExist()
                 .jsonPath('$.notes').doesNotExist()
@@ -315,10 +316,10 @@ class PhotoWebControllerIT extends PublicApiSpec {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath('$.recognition.bestCandidate.brand').isEqualTo("Ford")
-                .jsonPath('$.recognition.bestCandidate.isSelected').isEqualTo(true)
-                .jsonPath('$.recognition.candidates.length()').isEqualTo(1)
-                .jsonPath('$.recognition.candidates[0].brand').isEqualTo("Opel")
+                .jsonPath('$.vehicleRecognition.bestCandidate.brand').isEqualTo("Ford")
+                .jsonPath('$.vehicleRecognition.bestCandidate.isSelected').isEqualTo(true)
+                .jsonPath('$.vehicleRecognition.candidates.length()').isEqualTo(1)
+                .jsonPath('$.vehicleRecognition.candidates[0].brand').isEqualTo("Opel")
     }
 
     def "detail exposes exif.gps.lng, not lon"() {
@@ -428,10 +429,10 @@ class PhotoWebControllerIT extends PublicApiSpec {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath('$.recognition.vectorStatus').isEqualTo("PENDING")
-                .jsonPath('$.recognition.analysisStatus').isEqualTo("RECEIVED")
-                .jsonPath('$.recognition.suggestionStatus').isEqualTo("NONE")
-                .jsonPath('$.recognition.verificationStatus').isEqualTo("NONE")
+                .jsonPath('$.vehicleRecognition.vectorStatus').isEqualTo("PENDING")
+                .jsonPath('$.vehicleRecognition.analysisStatus').isEqualTo("RECEIVED")
+                .jsonPath('$.vehicleRecognition.suggestionStatus').isEqualTo("NONE")
+                .jsonPath('$.vehicleRecognition.verificationStatus').isEqualTo("NONE")
     }
 
     def "detail of an ERROR photo sends bestCandidate null and keeps the whole history"() {
@@ -456,10 +457,10 @@ class PhotoWebControllerIT extends PublicApiSpec {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath('$.recognition.bestCandidate').doesNotExist()
-                .jsonPath('$.recognition.candidates.length()').isEqualTo(2)
-                .jsonPath('$.recognition.errorMessage').isEqualTo("VectorError: boom")
-                .jsonPath('$.recognition.vectorStatus').isEqualTo("FAILED")
+                .jsonPath('$.vehicleRecognition.bestCandidate').doesNotExist()
+                .jsonPath('$.vehicleRecognition.candidates.length()').isEqualTo(2)
+                .jsonPath('$.vehicleRecognition.errorMessage').isEqualTo("VectorError: boom")
+                .jsonPath('$.vehicleRecognition.vectorStatus').isEqualTo("FAILED")
     }
 
     def "detail of an audio asset returns 404, the endpoint serves photos only"() {

@@ -84,11 +84,37 @@ class BadgeResolverTest {
     }
 
     @Test
-    fun `a failed axis wins over an already verified one`() {
+    fun `verified wins over a failed vector status`() {
         val badge = BadgeResolver.resolve(
             RagStatus(
                 vectorStatus = VectorStatus.FAILED,
                 verificationStatus = VerificationStatus.VERIFIED
+            ),
+            IngestState.INGESTED
+        )
+
+        assertEquals(RecognitionBadge.VERIFIED, badge)
+    }
+
+    @Test
+    fun `verified wins over a failed analysis status`() {
+        val badge = BadgeResolver.resolve(
+            RagStatus(
+                analysisStatus = AnalysisStatus.FAILED,
+                verificationStatus = VerificationStatus.VERIFIED
+            ),
+            IngestState.INGESTED
+        )
+
+        assertEquals(RecognitionBadge.VERIFIED, badge)
+    }
+
+    @Test
+    fun `a failed axis wins over a pending suggestion`() {
+        val badge = BadgeResolver.resolve(
+            RagStatus(
+                vectorStatus = VectorStatus.FAILED,
+                suggestionStatus = SuggestionStatus.SUGGESTED
             ),
             IngestState.INGESTED
         )

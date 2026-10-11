@@ -11,9 +11,9 @@ import com.emat.vehicle_collector_service.assets.infra.RagStatus
 object BadgeResolver {
 
     fun resolve(axes: RagStatus, ingestState: IngestState): RecognitionBadge = when {
+        axes.verificationStatus == VerificationStatus.VERIFIED -> RecognitionBadge.VERIFIED
         axes.vectorStatus == VectorStatus.FAILED || axes.analysisStatus == AnalysisStatus.FAILED ->
             RecognitionBadge.ERROR
-        axes.verificationStatus == VerificationStatus.VERIFIED -> RecognitionBadge.VERIFIED
         axes.suggestionStatus == SuggestionStatus.SUGGESTED -> RecognitionBadge.TO_REVIEW
         axes.suggestionStatus == SuggestionStatus.UNKNOWN -> RecognitionBadge.UNKNOWN
         ingestState != IngestState.INGESTED -> RecognitionBadge.RAW
