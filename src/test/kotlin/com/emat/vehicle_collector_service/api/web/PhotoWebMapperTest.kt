@@ -135,10 +135,10 @@ class PhotoWebMapperTest {
 
         val dto = PhotoWebMapper.toDetail(document, session = null)
 
-        assertEquals("external_llm", dto.recognition.bestCandidate?.source)
-        assertEquals(0.90, dto.recognition.bestCandidate?.confidence)
-        assertEquals(1, dto.recognition.candidates.size)
-        assertEquals("similarity", dto.recognition.candidates[0].source)
+        assertEquals("external_llm", dto.vehicleRecognition.bestCandidate?.source)
+        assertEquals(0.90, dto.vehicleRecognition.bestCandidate?.confidence)
+        assertEquals(1, dto.vehicleRecognition.candidates.size)
+        assertEquals("similarity", dto.vehicleRecognition.candidates[0].source)
     }
 
     @Test
@@ -160,9 +160,9 @@ class PhotoWebMapperTest {
 
         val dto = PhotoWebMapper.toDetail(document, session = null)
 
-        assertEquals("Opel", dto.recognition.bestCandidate?.brand)
-        assertEquals(1, dto.recognition.candidates.size)
-        assertEquals("Ford", dto.recognition.candidates[0].brand)
+        assertEquals("Opel", dto.vehicleRecognition.bestCandidate?.brand)
+        assertEquals(1, dto.vehicleRecognition.candidates.size)
+        assertEquals("Ford", dto.vehicleRecognition.candidates[0].brand)
     }
 
     @Test
@@ -182,8 +182,8 @@ class PhotoWebMapperTest {
 
             val dto = PhotoWebMapper.toDetail(document, session = null)
 
-            assertNull(dto.recognition.bestCandidate, "bestCandidate must be null for $badge")
-            assertEquals(2, dto.recognition.candidates.size, "whole history must stay visible for $badge")
+            assertNull(dto.vehicleRecognition.bestCandidate, "bestCandidate must be null for $badge")
+            assertEquals(2, dto.vehicleRecognition.candidates.size, "whole history must stay visible for $badge")
         }
     }
 
@@ -196,9 +196,28 @@ class PhotoWebMapperTest {
 
         val dto = PhotoWebMapper.toDetail(document, session = null)
 
-        assertEquals("Ford", dto.recognition.bestCandidate?.brand)
-        assertTrue(dto.recognition.bestCandidate!!.isSelected)
-        assertTrue(dto.recognition.candidates.isEmpty())
+        assertEquals("Ford", dto.vehicleRecognition.bestCandidate?.brand)
+        assertTrue(dto.vehicleRecognition.bestCandidate!!.isSelected)
+        assertTrue(dto.vehicleRecognition.candidates.isEmpty())
+    }
+
+    @Test
+    fun `VERIFIED with a failed vectorization keeps the confident pick and reports the error`() {
+        val selected = VehicleCandidate(ragCandidateId = 1L, brand = "Ford", selected = true, humanEdited = true)
+        val document = document(
+            recognition = VehicleRecognition(
+                badge = RecognitionBadge.VERIFIED,
+                ragStatus = RagStatus(vectorStatus = VectorStatus.FAILED, verificationStatus = VerificationStatus.VERIFIED),
+                lastError = "VectorError: boom",
+                candidates = listOf(selected)
+            )
+        )
+
+        val dto = PhotoWebMapper.toDetail(document, session = null)
+
+        assertEquals(RecognitionBadge.VERIFIED, dto.badge)
+        assertEquals("Ford", dto.vehicleRecognition.bestCandidate?.brand)
+        assertEquals("VectorError: boom", dto.vehicleRecognition.errorMessage)
     }
 
     @ParameterizedTest
@@ -211,7 +230,7 @@ class PhotoWebMapperTest {
     fun `vectorStatus is mapped onto the frozen contract values`(domain: VectorStatus, wire: VectorStatusResponse) {
         val document = document(recognition = VehicleRecognition(ragStatus = RagStatus(vectorStatus = domain)))
 
-        assertEquals(wire, PhotoWebMapper.toDetail(document, null).recognition.vectorStatus)
+        assertEquals(wire, PhotoWebMapper.toDetail(document, null).vehicleRecognition.vectorStatus)
     }
 
     @ParameterizedTest
@@ -225,7 +244,7 @@ class PhotoWebMapperTest {
     fun `analysisStatus is mapped onto the frozen contract values`(domain: AnalysisStatus, wire: AnalysisStatusResponse) {
         val document = document(recognition = VehicleRecognition(ragStatus = RagStatus(analysisStatus = domain)))
 
-        assertEquals(wire, PhotoWebMapper.toDetail(document, null).recognition.analysisStatus)
+        assertEquals(wire, PhotoWebMapper.toDetail(document, null).vehicleRecognition.analysisStatus)
     }
 
     @ParameterizedTest
@@ -241,7 +260,7 @@ class PhotoWebMapperTest {
     ) {
         val document = document(recognition = VehicleRecognition(ragStatus = RagStatus(verificationStatus = domain)))
 
-        assertEquals(wire, PhotoWebMapper.toDetail(document, null).recognition.verificationStatus)
+        assertEquals(wire, PhotoWebMapper.toDetail(document, null).vehicleRecognition.verificationStatus)
     }
 
     @ParameterizedTest
@@ -256,7 +275,7 @@ class PhotoWebMapperTest {
     ) {
         val document = document(recognition = VehicleRecognition(ragStatus = RagStatus(suggestionStatus = domain)))
 
-        assertEquals(wire, PhotoWebMapper.toDetail(document, null).recognition.suggestionStatus)
+        assertEquals(wire, PhotoWebMapper.toDetail(document, null).vehicleRecognition.suggestionStatus)
     }
 
     @Test
@@ -298,8 +317,8 @@ class PhotoWebMapperTest {
 
         val dto = PhotoWebMapper.toDetail(document, session = null)
 
-        assertNull(dto.recognition.bestCandidate)
-        assertTrue(dto.recognition.candidates.isEmpty())
+        assertNull(dto.vehicleRecognition.bestCandidate)
+        assertTrue(dto.vehicleRecognition.candidates.isEmpty())
     }
 
     @Test
@@ -317,8 +336,8 @@ class PhotoWebMapperTest {
             )
         )
 
-        assertEquals("VectorError: boom", PhotoWebMapper.toDetail(failed, null).recognition.errorMessage)
-        assertNull(PhotoWebMapper.toDetail(notFailed, null).recognition.errorMessage)
+        assertEquals("VectorError: boom", PhotoWebMapper.toDetail(failed, null).vehicleRecognition.errorMessage)
+        assertNull(PhotoWebMapper.toDetail(notFailed, null).vehicleRecognition.errorMessage)
     }
 
     @Test
@@ -379,9 +398,9 @@ class PhotoWebMapperTest {
 
         val dto = PhotoWebMapper.toDetail(document, session = null)
 
-        assertEquals("Ford", dto.recognition.bestCandidate?.brand)
-        assertEquals(PhotoWebMapper.toListItem(document).brand, dto.recognition.bestCandidate?.brand)
-        assertEquals(listOf("Opel"), dto.recognition.candidates.map { it.brand })
+        assertEquals("Ford", dto.vehicleRecognition.bestCandidate?.brand)
+        assertEquals(PhotoWebMapper.toListItem(document).brand, dto.vehicleRecognition.bestCandidate?.brand)
+        assertEquals(listOf("Opel"), dto.vehicleRecognition.candidates.map { it.brand })
     }
 
     @Test

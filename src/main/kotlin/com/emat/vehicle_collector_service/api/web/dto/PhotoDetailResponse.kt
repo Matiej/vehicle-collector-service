@@ -15,7 +15,7 @@ data class PhotoDetailResponse(
     val countryCode: String?,
     val city: String?,
     val albums: List<AlbumRefResponse>,
-    val recognition: RecognitionResponse,
+    val vehicleRecognition: VehicleRecognitionResponse,
     val exif: ExifResponse,
     val session: SessionRefResponse?,
     val notes: String?,
@@ -28,7 +28,7 @@ data class AlbumRefResponse(
     val name: String
 )
 
-data class RecognitionResponse(
+data class VehicleRecognitionResponse(
     val vectorStatus: VectorStatusResponse,
     val analysisStatus: AnalysisStatusResponse,
     val suggestionStatus: SuggestionStatusResponse,

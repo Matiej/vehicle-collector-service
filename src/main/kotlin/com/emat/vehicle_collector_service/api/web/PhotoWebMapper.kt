@@ -8,10 +8,10 @@ import com.emat.vehicle_collector_service.api.web.dto.FileMetaResponse
 import com.emat.vehicle_collector_service.api.web.dto.GpsResponse
 import com.emat.vehicle_collector_service.api.web.dto.PhotoDetailResponse
 import com.emat.vehicle_collector_service.api.web.dto.PhotoListItemResponse
-import com.emat.vehicle_collector_service.api.web.dto.RecognitionResponse
 import com.emat.vehicle_collector_service.api.web.dto.SessionRefResponse
 import com.emat.vehicle_collector_service.api.web.dto.SuggestionStatusResponse
 import com.emat.vehicle_collector_service.api.web.dto.VectorStatusResponse
+import com.emat.vehicle_collector_service.api.web.dto.VehicleRecognitionResponse
 import com.emat.vehicle_collector_service.api.web.dto.VerificationStatusResponse
 import com.emat.vehicle_collector_service.assets.domain.AnalysisStatus
 import com.emat.vehicle_collector_service.assets.domain.RecognitionBadge
@@ -76,7 +76,7 @@ object PhotoWebMapper {
             countryCode = asset.capture.place?.countryCode,
             city = asset.capture.place?.city,
             albums = emptyList(),
-            recognition = RecognitionResponse(
+            vehicleRecognition = VehicleRecognitionResponse(
                 vectorStatus = toVectorStatusResponse(ragStatus.vectorStatus),
                 analysisStatus = toAnalysisStatusResponse(ragStatus.analysisStatus),
                 suggestionStatus = toSuggestionStatusResponse(ragStatus.suggestionStatus),
