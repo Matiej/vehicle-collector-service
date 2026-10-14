@@ -21,6 +21,9 @@ spring:
     import: optional:file:/config/vehicle-collector-service-application.yml
   #    in docker, mounted from server file path in opt/
 
+server:
+  forward-headers-strategy: framework
+
 logging:
   level:
     root: INFO

@@ -11,7 +11,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource
 
 
 @Configuration
-@EnableConfigurationProperties(CorsProperties::class, GeocodingProperties::class)
+@EnableConfigurationProperties(CorsProperties::class, GeocodingProperties::class, WebAuthProperties::class)
 class GeneralConfiguration {
 
     @Bean

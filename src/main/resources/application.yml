@@ -1,4 +1,21 @@
 spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: ${app.web.auth.client-id}
+            client-secret: ${app.web.auth.client-secret}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            authorization-uri: ${app.web.auth.keycloak-public-url}/realms/${app.web.auth.realm}/protocol/openid-connect/auth
+            token-uri: ${app.web.auth.keycloak-internal-url}/realms/${app.web.auth.realm}/protocol/openid-connect/token
+            jwk-set-uri: ${app.web.auth.keycloak-internal-url}/realms/${app.web.auth.realm}/protocol/openid-connect/certs
+            user-name-attribute: sub
   server:
     max-http-request-size: 25MB
   application:
@@ -12,6 +29,14 @@ spring:
     level:
       root: INFO
       org.springframework.web.reactive.function.client: WARN
+
+server:
+  reactive:
+    session:
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
 
 springdoc:
   api-docs:
@@ -45,6 +70,13 @@ app:
     web-panel-permit-all: false
   web:
     owner-filter: true
+    auth:
+      panel-url: http://localhost:5173
+      keycloak-public-url: http://localhost:8085
+      keycloak-internal-url: ${app.web.auth.keycloak-public-url}
+      realm: vehicle
+      client-id: vehicle-web-bff
+      client-secret: configure-outside-repo
 
 keycloak:
   admin:

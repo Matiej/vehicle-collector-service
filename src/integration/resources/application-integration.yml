@@ -6,9 +6,32 @@ spring:
       auto-index-creation: true
   security:
     oauth2:
+      client:
+        registration:
+          keycloak:
+            provider: keycloak
+            client-id: ${app.web.auth.client-id}
+            client-secret: ${app.web.auth.client-secret}
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid,profile,email
+        provider:
+          keycloak:
+            authorization-uri: ${app.web.auth.keycloak-public-url}/realms/${app.web.auth.realm}/protocol/openid-connect/auth
+            token-uri: ${app.web.auth.keycloak-internal-url}/realms/${app.web.auth.realm}/protocol/openid-connect/token
+            jwk-set-uri: ${app.web.auth.keycloak-internal-url}/realms/${app.web.auth.realm}/protocol/openid-connect/certs
+            user-name-attribute: sub
       resourceserver:
         jwt:
           jwk-set-uri: http://localhost:1/realms/integration/protocol/openid-connect/certs
+
+server:
+  reactive:
+    session:
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
 
 springdoc:
   api-docs:
@@ -41,6 +64,13 @@ app:
     web-panel-permit-all: true
   web:
     owner-filter: true
+    auth:
+      panel-url: http://localhost:5173
+      keycloak-public-url: http://localhost:1
+      keycloak-internal-url: http://localhost:1
+      realm: integration
+      client-id: vehicle-web-bff
+      client-secret: integration-secret
 
 keycloak:
   admin:
