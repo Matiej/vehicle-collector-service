@@ -21,7 +21,9 @@ import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.security.web.server.authentication.HttpStatusServerEntryPoint
 import org.springframework.security.web.server.authentication.RedirectServerAuthenticationSuccessHandler
 import org.springframework.security.web.server.authentication.ServerAuthenticationEntryPointFailureHandler
+import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository
 import org.springframework.security.web.server.context.WebSessionServerSecurityContextRepository
+import org.springframework.security.web.server.savedrequest.NoOpServerRequestCache
 import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatchers
 
 @Configuration
@@ -57,7 +59,7 @@ class SecurityConfiguration(
             .oauth2Login { login ->
                 login.securityContextRepository(sessionContextRepository)
                     .authorizationRequestResolver(pkceAuthorizationRequestResolver(clientRegistrations))
-                    .authenticationSuccessHandler(RedirectServerAuthenticationSuccessHandler(webAuthProperties.panelUrl))
+                    .authenticationSuccessHandler(redirectToPanel())
                     .authenticationFailureHandler(ServerAuthenticationEntryPointFailureHandler(unauthorized))
             }
         return http.build()
@@ -67,6 +69,8 @@ class SecurityConfiguration(
     @Order(Ordered.LOWEST_PRECEDENCE)
     fun securityWebFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
         http.csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
+            .requestCache { cache -> cache.requestCache(NoOpServerRequestCache.getInstance()) }
             .authorizeExchange { exchanges ->
                 exchanges  // public client test (link with token)
                     .pathMatchers("/actuator/health/").permitAll()
@@ -92,6 +96,12 @@ class SecurityConfiguration(
             extractAuthoritiesFromRealmRoles(jwt)
         }
         return ReactiveJwtAuthenticationConverterAdapter(converter)
+    }
+
+    private fun redirectToPanel(): RedirectServerAuthenticationSuccessHandler {
+        val handler = RedirectServerAuthenticationSuccessHandler(webAuthProperties.panelUrl)
+        handler.setRequestCache(NoOpServerRequestCache.getInstance())
+        return handler
     }
 
     private fun pkceAuthorizationRequestResolver(

@@ -8,6 +8,11 @@ data class WebAuthProperties(
     val keycloakPublicUrl: String,
     val keycloakInternalUrl: String,
     val realm: String,
+    val issuer: String,
     val clientId: String,
     val clientSecret: String
-)
+) {
+    fun publicRealmEndpoint(path: String) = "$keycloakPublicUrl/realms/$realm/protocol/openid-connect/$path"
+
+    fun internalRealmEndpoint(path: String) = "$keycloakInternalUrl/realms/$realm/protocol/openid-connect/$path"
+}
