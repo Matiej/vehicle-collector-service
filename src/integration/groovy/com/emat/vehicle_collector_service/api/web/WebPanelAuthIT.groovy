@@ -150,7 +150,92 @@ class WebPanelAuthIT extends PublicApiSpec {
                 .expectStatus().isUnauthorized()
     }
 
-    private LoginResult loginThroughKeycloak(String subject, String issuer) {
+    def "current user is read from the panel session with application roles only"() {
+        given:
+        LoginResult login = loginThroughKeycloak(USER_A, EXPECTED_ISSUER, [
+                preferred_username: "jan.kowalski",
+                name              : "Jan Kowalski",
+                realm_access      : [roles: ["default-roles-integration", "offline_access", "REGULAR_USER"]]
+        ])
+
+        expect:
+        webTestClient.get().uri("/api/web/me")
+                .cookie("SESSION", login.sessionId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.userId').isEqualTo(USER_A)
+                .jsonPath('$.username').isEqualTo("jan.kowalski")
+                .jsonPath('$.displayName').isEqualTo("Jan Kowalski")
+                .jsonPath('$.roles.length()').isEqualTo(1)
+                .jsonPath('$.roles[0]').isEqualTo("REGULAR_USER")
+    }
+
+    def "current user without name claims falls back to the subject and has no roles"() {
+        given:
+        LoginResult login = loginThroughKeycloak(USER_A, EXPECTED_ISSUER)
+
+        expect:
+        webTestClient.get().uri("/api/web/me")
+                .cookie("SESSION", login.sessionId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath('$.userId').isEqualTo(USER_A)
+                .jsonPath('$.username').isEqualTo(USER_A)
+                .jsonPath('$.displayName').isEqualTo(USER_A)
+                .jsonPath('$.roles.length()').isEqualTo(0)
+    }
+
+    def "current user without a session answers 401"() {
+        expect:
+        webTestClient.get().uri("/api/web/me")
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectHeader().doesNotExist(HttpHeaders.LOCATION)
+    }
+
+    def "logout ends the panel session and returns the Keycloak logout URL"() {
+        given:
+        LoginResult login = loginThroughKeycloak(USER_A, EXPECTED_ISSUER)
+        String issuedIdToken = FAKE_KEYCLOAK.lastIssuedIdToken
+
+        when:
+        EntityExchangeResult<Map> logout = webTestClient.post().uri("/api/web/logout")
+                .cookie("SESSION", login.sessionId)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Map)
+                .returnResult()
+
+        then:
+        URI logoutUrl = URI.create(logout.responseBody.logoutUrl as String)
+        "${logoutUrl.scheme}://${logoutUrl.authority}${logoutUrl.path}" ==
+                "http://localhost:1/realms/integration/protocol/openid-connect/logout"
+
+        and:
+        MultiValueMap<String, String> params = UriComponentsBuilder.fromUri(logoutUrl).build().queryParams
+        decoded(params.getFirst("id_token_hint")) == issuedIdToken
+        decoded(params.getFirst("post_logout_redirect_uri")) == PANEL_URL
+        decoded(params.getFirst("client_id")) == "vehicle-web-bff"
+
+        and:
+        webTestClient.get().uri("/api/web/me")
+                .cookie("SESSION", login.sessionId)
+                .exchange()
+                .expectStatus().isUnauthorized()
+    }
+
+    def "logout without a session answers 401"() {
+        expect:
+        webTestClient.post().uri("/api/web/logout")
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectHeader().doesNotExist(HttpHeaders.LOCATION)
+                .expectBody().isEmpty()
+    }
+
+    private LoginResult loginThroughKeycloak(String subject, String issuer, Map<String, Object> userClaims = [:]) {
         EntityExchangeResult<Void> authorization = webTestClient.get().uri("/oauth2/authorization/keycloak")
                 .exchange()
                 .expectBody(Void)
@@ -160,7 +245,7 @@ class WebPanelAuthIT extends PublicApiSpec {
                 .build()
                 .queryParams
 
-        FAKE_KEYCLOAK.willIssueIdToken(subject, decoded(params.getFirst("nonce")), issuer)
+        FAKE_KEYCLOAK.willIssueIdToken(subject, decoded(params.getFirst("nonce")), issuer, userClaims)
 
         EntityExchangeResult<Void> callback = webTestClient.get()
                 .uri("/login/oauth2/code/keycloak?code=fake-code&state={state}", decoded(params.getFirst("state")))

@@ -6,14 +6,14 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
+import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.security.config.web.server.ServerHttpSecurity
-import org.springframework.security.core.GrantedAuthority
-import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers
 import org.springframework.security.oauth2.client.web.server.DefaultServerOAuth2AuthorizationRequestResolver
 import org.springframework.security.oauth2.client.web.server.ServerOAuth2AuthorizationRequestResolver
+import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter
@@ -21,6 +21,9 @@ import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.security.web.server.authentication.HttpStatusServerEntryPoint
 import org.springframework.security.web.server.authentication.RedirectServerAuthenticationSuccessHandler
 import org.springframework.security.web.server.authentication.ServerAuthenticationEntryPointFailureHandler
+import org.springframework.security.web.server.authentication.logout.DelegatingServerLogoutHandler
+import org.springframework.security.web.server.authentication.logout.SecurityContextServerLogoutHandler
+import org.springframework.security.web.server.authentication.logout.WebSessionServerLogoutHandler
 import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository
 import org.springframework.security.web.server.context.WebSessionServerSecurityContextRepository
 import org.springframework.security.web.server.savedrequest.NoOpServerRequestCache
@@ -40,7 +43,8 @@ class SecurityConfiguration(
     @Order(Ordered.HIGHEST_PRECEDENCE)
     fun webPanelSecurityWebFilterChain(
         http: ServerHttpSecurity,
-        clientRegistrations: ReactiveClientRegistrationRepository
+        clientRegistrations: ReactiveClientRegistrationRepository,
+        logoutSuccessHandler: WebPanelLogoutSuccessHandler
     ): SecurityWebFilterChain {
         val sessionContextRepository = WebSessionServerSecurityContextRepository()
         val unauthorized = HttpStatusServerEntryPoint(HttpStatus.UNAUTHORIZED)
@@ -61,6 +65,11 @@ class SecurityConfiguration(
                     .authorizationRequestResolver(pkceAuthorizationRequestResolver(clientRegistrations))
                     .authenticationSuccessHandler(redirectToPanel())
                     .authenticationFailureHandler(ServerAuthenticationEntryPointFailureHandler(unauthorized))
+            }
+            .logout { logout ->
+                logout.logoutUrl(WEB_PANEL_LOGOUT_PATH)
+                    .logoutHandler(endSession(sessionContextRepository))
+                    .logoutSuccessHandler(logoutSuccessHandler)
             }
         return http.build()
     }
@@ -93,9 +102,23 @@ class SecurityConfiguration(
     fun jwtAuthConverter(): ReactiveJwtAuthenticationConverterAdapter {
         val converter = JwtAuthenticationConverter()
         converter.setJwtGrantedAuthoritiesConverter { jwt: Jwt ->
-            extractAuthoritiesFromRealmRoles(jwt)
+            RealmRoles.authoritiesFromClaims(jwt.claims)
         }
         return ReactiveJwtAuthenticationConverterAdapter(converter)
+    }
+
+    @Bean
+    fun oidcRealmRolesAuthoritiesMapper(): GrantedAuthoritiesMapper =
+        GrantedAuthoritiesMapper { authorities ->
+            authorities
+                .filterIsInstance<OidcUserAuthority>()
+                .flatMap { authority -> RealmRoles.authoritiesFromClaims(authority.attributes) }
+        }
+
+    private fun endSession(sessionContextRepository: WebSessionServerSecurityContextRepository): DelegatingServerLogoutHandler {
+        val clearContext = SecurityContextServerLogoutHandler()
+        clearContext.setSecurityContextRepository(sessionContextRepository)
+        return DelegatingServerLogoutHandler(clearContext, WebSessionServerLogoutHandler())
     }
 
     private fun redirectToPanel(): RedirectServerAuthenticationSuccessHandler {
@@ -121,16 +144,8 @@ class SecurityConfiguration(
         }
     }
 
-    private fun extractAuthoritiesFromRealmRoles(jwt: Jwt): Collection<GrantedAuthority?> {
-        val realmAccessClaim = jwt.claims["realm_access"] as? Map<*, *> ?: return emptyList()
-        val rolesObj: List<*> = realmAccessClaim["roles"] as? List<*> ?: return emptyList()
-
-        return rolesObj
-            .filterIsInstance<String>()
-            .map { roleName -> SimpleGrantedAuthority("ROLE_$roleName") } // TECH_ADMIN -> ROLE_TECH_ADMIN
-    }
-
     companion object {
+        private const val WEB_PANEL_LOGOUT_PATH = "/api/web/logout"
         private val WEB_PANEL_PATHS = arrayOf("/api/web/**", "/oauth2/**", "/login/oauth2/**")
     }
 }
