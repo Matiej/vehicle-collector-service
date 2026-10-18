@@ -39,6 +39,10 @@ class FakeKeycloak {
         "http://localhost:${server.address.port}"
     }
 
+    void stop() {
+        server.stop(0)
+    }
+
     void willIssueIdToken(String subject, String nonce, String issuer) {
         Date now = new Date()
         nextIdTokenClaims = new JWTClaimsSet.Builder()

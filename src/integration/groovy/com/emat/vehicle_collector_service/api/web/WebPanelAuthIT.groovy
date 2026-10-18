@@ -29,6 +29,10 @@ class WebPanelAuthIT extends PublicApiSpec {
         registry.add("app.web.auth.keycloak-internal-url", { FAKE_KEYCLOAK.baseUrl } as Supplier)
     }
 
+    def cleanupSpec() {
+        FAKE_KEYCLOAK.stop()
+    }
+
     def "web endpoint without a session answers 401 instead of redirecting to Keycloak: #path"() {
         expect:
         webTestClient.get().uri(path)
@@ -106,6 +110,9 @@ class WebPanelAuthIT extends PublicApiSpec {
         login.callback.responseHeaders.getLocation().toString() == PANEL_URL
 
         and:
+        login.sessionId != login.preLoginSessionId
+
+        and:
         webTestClient.get().uri("/api/web/photos?ownerId=${USER_A}")
                 .cookie("SESSION", login.sessionId)
                 .exchange()
@@ -162,7 +169,7 @@ class WebPanelAuthIT extends PublicApiSpec {
                 .expectBody(Void)
                 .returnResult()
         ResponseCookie renewedSession = callback.responseCookies.getFirst("SESSION")
-        new LoginResult(callback, renewedSession?.value ?: sessionId)
+        new LoginResult(callback, sessionId, renewedSession?.value ?: sessionId)
     }
 
     private static String decoded(String queryValue) {
@@ -171,10 +178,12 @@ class WebPanelAuthIT extends PublicApiSpec {
 
     private static class LoginResult {
         final EntityExchangeResult<Void> callback
+        final String preLoginSessionId
         final String sessionId
 
-        LoginResult(EntityExchangeResult<Void> callback, String sessionId) {
+        LoginResult(EntityExchangeResult<Void> callback, String preLoginSessionId, String sessionId) {
             this.callback = callback
+            this.preLoginSessionId = preLoginSessionId
             this.sessionId = sessionId
         }
     }
