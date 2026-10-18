@@ -15,11 +15,11 @@ browsing path, and only this service serves files and thumbnails. Frontends neve
 ## Read at session start
 
 1. `info/vc-kotlin-architecture.md` — architecture of this service, decisions D-1…D-12.
-2. The current session plan / cheat sheet in `info/` (e.g. `info/backend-catchup-2026-10-09.md`).
+2. `info/README.md` — map of the documentation (what lives where).
 3. The current task card in `info/jira/` and its epic in `info/epic/`.
 4. For `/api/web/**` endpoints: contracts in the FE repo `/mnt/g/REACT/vehicle-collector-fe/info/contracts/`
    and the board `/mnt/g/REACT/vehicle-collector-fe/info/backend-frontend_agreements.md`.
-5. For RAG integration: `info/backend-dev-context.md` (the RAG service's living document, not this service's).
+5. For RAG integration: `info/rag/backend-dev-context.md` (the RAG service's living document, not this service's).
 
 `info/` is in `.gitignore` on purpose — documentation stays local. A clean `git status` does not mean
 changes in `info/` were not saved.
@@ -39,6 +39,9 @@ changes in `info/` were not saved.
 
 - Cards: `info/jira/EMAT-0xx_<epic>_<description>.md`, epics: `info/epic/E0xx_*.md`.
 - Branch: `dev/EMAT-0xx_<short_description>`, commit: `EMAT-0xx | <description in English>`.
+- When an epic is closed, move the epic and all its cards (plans, checklists, reviews) to `info/done/E0xx/`.
+  A document that is no longer true (superseded, decision changed) goes to `info/archive/` with a line
+  in `info/archive/README.md` saying why and what replaces it.
 
 ## Contracts
 
@@ -78,12 +81,14 @@ Call out every such change explicitly in the summary. Secrets never go into `app
 - `VehicleCollectorServiceApplicationTests.contextLoads` is a known failure — ignore it.
 - Testcontainers saying "Could not find a valid Docker environment" while `docker ps` works usually
   means a rejected Docker API version, not a missing Docker — see `src/integration/resources/docker-java.properties`.
-- The WSL distro used by Claude has no Docker, so `mvn verify` has to be run by Maciek.
+- The WSL distro used by Claude sees Docker only while Maciek's Docker is running — check `docker ps`;
+  if it fails, ask Maciek to start Docker or to run `mvn verify` himself.
 - Locally, after Mongo model changes, old documents may fail to map — drop the collections.
 
-## Status as of 2026-10-11
+## Status as of 2026-10-18
 
-- E001 (PWA API) and E002 (list + detail `/api/web/photos`) are merged.
-- Order: **EMAT-025** (B-1/B-2, detail fixes requested by FE) → **E004 auth** EMAT-021 → 022 → 023 → 024
+- E001 (PWA API) and E002 (list + detail `/api/web/photos`, incl. EMAT-025) are merged and closed.
+- **E004 auth in progress:** EMAT-021 merged, EMAT-022 code done and reviewed — both wait for the manual
+  Keycloak run (checklists in `info/jira/`). Next: EMAT-023 → 024
   → F4 sessions + upload → F5 albums → catalogue → F3 actions → Semantic Search.
 - Auth goes before new endpoints so they do not have to be reworked for the session later.

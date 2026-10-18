@@ -21,6 +21,7 @@ class FakeKeycloak {
     private final RSAKey signingKey = new RSAKeyGenerator(2048).keyID("fake-keycloak").keyUse(KeyUse.SIGNATURE).generate()
     private final HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0)
     private volatile JWTClaimsSet nextIdTokenClaims
+    private volatile String lastIssuedIdToken
 
     FakeKeycloak(String realm, String clientId) {
         this.realm = realm
@@ -43,9 +44,13 @@ class FakeKeycloak {
         server.stop(0)
     }
 
-    void willIssueIdToken(String subject, String nonce, String issuer) {
+    String getLastIssuedIdToken() {
+        lastIssuedIdToken
+    }
+
+    void willIssueIdToken(String subject, String nonce, String issuer, Map<String, Object> userClaims = [:]) {
         Date now = new Date()
-        nextIdTokenClaims = new JWTClaimsSet.Builder()
+        JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder()
                 .issuer(issuer)
                 .subject(subject)
                 .audience(clientId)
@@ -53,7 +58,8 @@ class FakeKeycloak {
                 .claim("nonce", nonce)
                 .issueTime(now)
                 .expirationTime(new Date(now.time + 300_000))
-                .build()
+        userClaims.each { name, value -> claims.claim(name, value) }
+        nextIdTokenClaims = claims.build()
     }
 
     private String tokenResponse() {
@@ -67,7 +73,8 @@ class FakeKeycloak {
                 nextIdTokenClaims
         )
         idToken.sign(new RSASSASigner(signingKey))
-        idToken.serialize()
+        lastIssuedIdToken = idToken.serialize()
+        lastIssuedIdToken
     }
 
     private static void respondWithJson(HttpExchange exchange, String json) {
