@@ -13,6 +13,14 @@ spring:
       root: INFO
       org.springframework.web.reactive.function.client: WARN
 
+server:
+  reactive:
+    session:
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
+
 springdoc:
   api-docs:
     enabled: false
@@ -45,6 +53,14 @@ app:
     web-panel-permit-all: false
   web:
     owner-filter: true
+    auth:
+      panel-url: http://localhost:5173
+      keycloak-public-url: http://localhost:8085
+      keycloak-internal-url: ${app.web.auth.keycloak-public-url}
+      realm: vehicle
+      issuer: ${app.web.auth.keycloak-public-url}/realms/${app.web.auth.realm}
+      client-id: vehicle-web-bff
+      client-secret: configure-outside-repo
 
 keycloak:
   admin:

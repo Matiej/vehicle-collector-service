@@ -11,6 +11,14 @@ spring:
       authentication-database: admin
       auto-index-creation: true
 
+server:
+  reactive:
+    session:
+      cookie:
+        http-only: true
+        secure: false
+        same-site: lax
+
 springdoc:
   api-docs:
     enabled: true

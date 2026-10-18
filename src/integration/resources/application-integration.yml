@@ -10,6 +10,14 @@ spring:
         jwt:
           jwk-set-uri: http://localhost:1/realms/integration/protocol/openid-connect/certs
 
+server:
+  reactive:
+    session:
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
+
 springdoc:
   api-docs:
     enabled: false
@@ -41,6 +49,14 @@ app:
     web-panel-permit-all: true
   web:
     owner-filter: true
+    auth:
+      panel-url: http://localhost:5173
+      keycloak-public-url: http://localhost:1
+      keycloak-internal-url: http://localhost:1
+      realm: integration
+      issuer: ${app.web.auth.keycloak-public-url}/realms/${app.web.auth.realm}
+      client-id: vehicle-web-bff
+      client-secret: integration-secret
 
 keycloak:
   admin:
